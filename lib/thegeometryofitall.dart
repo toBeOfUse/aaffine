@@ -1,17 +1,16 @@
 import 'dart:ui';
 
-/// Assumes we're facing the direction the line goes in
 enum LineSide { left, right, onTopOf }
 
-/// A positioned vector is different from a line segment because it might have
-/// infinite length. I have decided this
-class PositionedVector implements Comparable {
+/// A radiant vector is like a line segment but it might have infinite length in
+/// exactly one direction. It's an optionally infinite ray. I have decided this
+class RadiantVector implements Comparable {
   late final Offset from;
   late final Offset towards;
   late final bool infiniteLength;
 
-  PositionedVector(this.from, this.towards, this.infiniteLength);
-  PositionedVector.pointSlope(this.from, double slope, [double length = 1]) {
+  RadiantVector(this.from, this.towards, this.infiniteLength);
+  RadiantVector.pointSlope(this.from, double slope, [double length = 1]) {
     towards = from + Offset(1 / slope, slope);
     if (length == double.infinity) {
       infiniteLength = true;
@@ -23,7 +22,7 @@ class PositionedVector implements Comparable {
 
   @override
   String toString() {
-    return "PositionedVector{"
+    return "RadiantVector{"
         "from $from, towards $towards, ${infiniteLength ? '' : 'not '}infinite}";
   }
 
@@ -41,19 +40,18 @@ class PositionedVector implements Comparable {
   Offset? _positionVector;
   Offset get positionVector => _positionVector ??= _computePositionVector();
 
-  PositionedVector normalized() {
-    return PositionedVector(from, positionVector / length + towards, false);
+  RadiantVector normalized() {
+    return RadiantVector(from, positionVector / length + towards, false);
   }
 
-  PositionedVector translate(Offset direction) {
-    return PositionedVector(
-        from + direction, towards + direction, infiniteLength);
+  RadiantVector translate(Offset direction) {
+    return RadiantVector(from + direction, towards + direction, infiniteLength);
   }
 
   /// Based on vector length. Implementation note: uses [Offset.distanceSquared]
   /// for performance
   @override
-  int compareTo(covariant PositionedVector p2) {
+  int compareTo(covariant RadiantVector p2) {
     final thisDS =
         infiniteLength ? double.infinity : (towards - from).distanceSquared;
     final otherDS = p2.infiniteLength
@@ -68,9 +66,13 @@ class PositionedVector implements Comparable {
     }
   }
 
-  /// Assumes we're standing at [from] and look at [towards]. Warning: this
-  /// method cheats and assumes this vector extends in both directions infinitely
-  /// to avoid writing a whole new Line class.
+  /// Assumes we're standing at [from] and look at [towards]. WARNING: this
+  /// method cheats and assumes this vector extends in both directions
+  /// infinitely because the use case is specific enough to allow that for now.
+  /// Fixing that would just require checking if a perpendicular vector
+  /// extending from point would intersect this vector (presumably via a call to
+  /// [intersectWith] like at the beginning of [closestPointOn]) and returning a
+  /// new value if not (i.e. if [intersectWith] returns null.)
   LineSide onSideOf(Offset point) {
     final det = (towards.dx - from.dx) * (point.dy - from.dy) -
         (towards.dy - from.dy) * (point.dx - from.dx);
@@ -83,10 +85,10 @@ class PositionedVector implements Comparable {
     }
   }
 
-  /// Finds the intersection point between two PositionedVectors. Returns null
+  /// Finds the intersection point between two [RadiantVector]s. Returns null
   /// if no intersection can be found or if the vectors are colinear. Heavily
   /// adapted from https://stackoverflow.com/a/565282/3962267 .
-  Offset? intersectWith(covariant PositionedVector other) {
+  Offset? intersectWith(covariant RadiantVector other) {
     double crossProduct(Offset a, Offset b) {
       return a.dx * b.dy - a.dy * b.dx;
     }
@@ -115,15 +117,17 @@ class PositionedVector implements Comparable {
   }
 
   Offset closestPointOn(Offset point) {
-    // Theory: to find the closest point on a line to an incoming point, project
-    // along the vector that passes through the incoming point and is
-    // perpendicular to this one.
+    // Theory: to find the closest point on a RadiantVector to an incoming
+    // point, project along the (different) line that passes through the
+    // incoming point and is perpendicular to this RadiantVector.
     final rotatedPV = Offset(positionVector.dy, -positionVector.dx);
-    final projVector = PositionedVector.pointSlope(
+    // The perpendicular line is here represented by a RadiantVector. Because
+    // we only need to go in one direction
+    final projVector = RadiantVector.pointSlope(
         point, rotatedPV.dy / rotatedPV.dx, double.infinity);
     final projected = intersectWith(projVector);
     if (projected == null) {
-      // If there is no intersection between the perpendicular vector through
+      // If there is no intersection between the perpendicular line through
       // the point and this one, one of the endpoints is closest
       if ((point - from).distanceSquared < (point - towards).distanceSquared) {
         return from;

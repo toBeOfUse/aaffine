@@ -39,6 +39,7 @@ class FramesPage extends StatefulWidget {
   State<FramesPage> createState() => _FramesPageState();
 }
 
+/// Exits to be contained in [FrameModel].
 class PointModel {
   Offset loc;
   static int idStream = 0;
@@ -46,11 +47,15 @@ class PointModel {
   PointModel(this.loc) : id = idStream++;
 }
 
+/// Describes a convex quadrilateral with points that can be manipulated via the
+/// [drag] method.
 class FrameModel {
   late final List<PointModel> _points;
   FrameModel(List<Offset> points) : assert(points.length == 4) {
     _points = sortPointsCW([for (final p in points) PointModel(p)]);
   }
+
+  /// Creates a very boring default frame.
   factory FrameModel.square(
       {Offset pos = const Offset(20, 20), int sideLength = 100}) {
     return FrameModel([
@@ -65,8 +70,8 @@ class FrameModel {
     return _points;
   }
 
-  /// Access the points in clockwise winding order so lines can be drawn
-  /// between them in order to form a square and not like, disconnected crossed
+  /// Sort the points in clockwise winding order so lines can be drawn between
+  /// them in order to reliably form a square and not like, disconnected crossed
   /// line segments.
   List<PointModel> sortPointsCW(List<PointModel> points) {
     final sum = [for (final p in points) p.loc].reduce((o1, o2) => o1 + o2);
@@ -78,6 +83,8 @@ class FrameModel {
 
   int getPointIndex(int pointID) => points.indexWhere((p) => p.id == pointID);
 
+  /// Attempts to move the point to [aimTowards] while avoiding making the frame
+  /// a concave shape. This took a lot more math than expected...
   void drag(int pointID, Offset aimTowards) {
     final pointIndex = getPointIndex(pointID);
     Offset opposite = points[(pointIndex + 2) % 4].loc;
@@ -85,23 +92,25 @@ class FrameModel {
     Offset prev = points[(pointIndex + 3) % 4].loc;
     // do not go to the left of this one
     final oppositeForward =
-        PositionedVector(opposite, prev, true).translate(prev - opposite);
+        RadiantVector(opposite, prev, true).translate(prev - opposite);
     // or the right of this one
     final oppositeBackward =
-        PositionedVector(opposite, next, true).translate(next - opposite);
+        RadiantVector(opposite, next, true).translate(next - opposite);
     // or the left of this one.
-    final crossMember = PositionedVector(next, prev, false);
+    final crossMember = RadiantVector(next, prev, false);
     if (oppositeForward.onSideOf(aimTowards) == LineSide.left ||
         oppositeBackward.onSideOf(aimTowards) == LineSide.right ||
         crossMember.onSideOf(aimTowards) == LineSide.left) {
-      log("mouse entering illegal zone D:<");
-      log("mouse at: $aimTowards");
-      log("opposite forward: $oppositeForward");
-      log("side thereof: ${oppositeForward.onSideOf(aimTowards)}");
-      log("opposite backward: $oppositeBackward");
-      log("side thereof: ${oppositeBackward.onSideOf(aimTowards)}");
-      log("cross member: $crossMember");
-      log("side thereof: ${crossMember.onSideOf(aimTowards)}");
+      if (kDebugMode) {
+        log("mouse entering illegal zone D:<");
+        log("mouse at: $aimTowards");
+        log("opposite forward: $oppositeForward");
+        log("side thereof: ${oppositeForward.onSideOf(aimTowards)}");
+        log("opposite backward: $oppositeBackward");
+        log("side thereof: ${oppositeBackward.onSideOf(aimTowards)}");
+        log("cross member: $crossMember");
+        log("side thereof: ${crossMember.onSideOf(aimTowards)}");
+      }
 
       // good lord
       final closestPoints = [
@@ -120,7 +129,10 @@ class FrameModel {
 class FramesModel extends ChangeNotifier {
   final List<FrameModel> frames;
   final Map<int, FrameModel> _pointIndex = {};
-  final GlobalKey _paintKey = GlobalKey(debugLabel: "The painty boy");
+
+  /// Used to identify the [CustomPaint] widget whose local coordinate system we
+  /// need to use in both drawing and mouse positioning
+  final GlobalKey paintKey = GlobalKey(debugLabel: "The painty boy");
 
   FramesModel() : frames = [FrameModel.square()] {
     for (final frame in frames) {
@@ -138,6 +150,8 @@ class FramesModel extends ChangeNotifier {
     }
   }
 
+  /// This is a bit meaningless absent the context of the [FrameModel] but is
+  /// useful for debug output
   int getPointIndex(int pointID) {
     final frame = _pointIndex[pointID];
     if (frame == null) {
@@ -146,10 +160,11 @@ class FramesModel extends ChangeNotifier {
       return frame.getPointIndex(pointID);
     }
   }
-
-  GlobalKey get paintKey => _paintKey;
 }
 
+/// Draws a little circle to represent a moveable point; detects pointer events
+/// that want to move it and gets [FramesModel] to update the state based on
+/// them.
 class PointWidget extends StatelessWidget {
   final int pointID;
   static const int radius = 5;
@@ -181,6 +196,8 @@ class PointWidget extends StatelessWidget {
   }
 }
 
+/// Draws a [FrameModel] using a [FramePainter] and [PointWidget]s. And some
+/// [Text] when in debug mode
 class FrameWidget extends StatelessWidget {
   final FrameModel frame;
   const FrameWidget({Key? key, required this.frame}) : super(key: key);
