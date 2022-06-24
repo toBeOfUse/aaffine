@@ -8,7 +8,7 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'thegeometryofitall.dart';
+import 'RadiantVector.dart';
 
 void main() {
   runApp(const MyApp());
