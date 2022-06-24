@@ -1,13 +1,14 @@
 import 'dart:developer';
 import 'dart:io';
-import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
+import 'thegeometryofitall.dart';
 
 void main() {
   runApp(const MyApp());
@@ -75,26 +76,51 @@ class FrameModel {
     return cwPoints;
   }
 
-  void drag(int pointID, Offset change) {
-    final pointIndex = points.indexWhere((p) => p.id == pointID);
-    if (pointIndex == -1) {
-      log("attempt to drag nonexistent point with id ${pointID.toString()}",
-          level: 1000);
-      return;
+  int getPointIndex(int pointID) => points.indexWhere((p) => p.id == pointID);
+
+  void drag(int pointID, Offset aimTowards) {
+    final pointIndex = getPointIndex(pointID);
+    Offset opposite = points[(pointIndex + 2) % 4].loc;
+    Offset next = points[(pointIndex + 1) % 4].loc;
+    Offset prev = points[(pointIndex + 3) % 4].loc;
+    // do not go to the left of this one
+    final oppositeForward =
+        PositionedVector(opposite, prev, true).translate(prev - opposite);
+    // or the right of this one
+    final oppositeBackward =
+        PositionedVector(opposite, next, true).translate(next - opposite);
+    // or the left of this one.
+    final crossMember = PositionedVector(next, prev, false);
+    if (oppositeForward.onSideOf(aimTowards) == LineSide.left ||
+        oppositeBackward.onSideOf(aimTowards) == LineSide.right ||
+        crossMember.onSideOf(aimTowards) == LineSide.left) {
+      log("mouse entering illegal zone D:<");
+      log("mouse at: $aimTowards");
+      log("opposite forward: $oppositeForward");
+      log("side thereof: ${oppositeForward.onSideOf(aimTowards)}");
+      log("opposite backward: $oppositeBackward");
+      log("side thereof: ${oppositeBackward.onSideOf(aimTowards)}");
+      log("cross member: $crossMember");
+      log("side thereof: ${crossMember.onSideOf(aimTowards)}");
+
+      // good lord
+      final closestPoints = [
+        ...[oppositeForward, oppositeBackward, crossMember]
+            .map((e) => e.closestPointOn(aimTowards))
+      ]..sort((p1, p2) => (p1 - aimTowards)
+          .distanceSquared
+          .compareTo((p2 - aimTowards).distanceSquared));
+      points[pointIndex].loc = closestPoints[0];
+    } else {
+      points[pointIndex].loc = aimTowards;
     }
-    final point = points[pointIndex];
-    // final dividingLine = [
-    //   points[(pointIndex + 1) % 4],
-    //   points[(pointIndex + 3) % 4]
-    // ];
-    point.loc += change;
-    point.loc = Offset(math.max(0, point.loc.dx), math.max(0, point.loc.dy));
   }
 }
 
 class FramesModel extends ChangeNotifier {
   final List<FrameModel> frames;
   final Map<int, FrameModel> _pointIndex = {};
+  final GlobalKey _paintKey = GlobalKey(debugLabel: "The painty boy");
 
   FramesModel() : frames = [FrameModel.square()] {
     for (final frame in frames) {
@@ -104,10 +130,24 @@ class FramesModel extends ChangeNotifier {
     }
   }
 
-  void drag(int pointID, Offset change) {
-    _pointIndex[pointID]?.drag(pointID, change);
-    notifyListeners();
+  void drag(int pointID, Offset position) {
+    final frame = _pointIndex[pointID];
+    if (frame != null) {
+      frame.drag(pointID, position);
+      notifyListeners();
+    }
   }
+
+  int getPointIndex(int pointID) {
+    final frame = _pointIndex[pointID];
+    if (frame == null) {
+      return -1;
+    } else {
+      return frame.getPointIndex(pointID);
+    }
+  }
+
+  GlobalKey get paintKey => _paintKey;
 }
 
 class PointWidget extends StatelessWidget {
@@ -118,8 +158,13 @@ class PointWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanUpdate: (details) {
-        Provider.of<FramesModel>(context, listen: false)
-            .drag(pointID, details.delta);
+        final state = Provider.of<FramesModel>(context, listen: false);
+        Offset? position =
+            (state.paintKey.currentContext?.findRenderObject() as RenderBox?)
+                ?.globalToLocal(details.globalPosition);
+        if (position != null) {
+          state.drag(pointID, position);
+        }
       },
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -142,15 +187,23 @@ class FrameWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = Provider.of<FramesModel>(context, listen: false);
     return CustomPaint(
+        key: state.paintKey,
         painter: FramePainter(frame),
         child: Stack(
           children: [
-            for (final p in frame.points)
+            for (final p in frame.points) ...[
               Positioned(
                   left: p.loc.dx - PointWidget.radius,
                   top: p.loc.dy - PointWidget.radius,
-                  child: PointWidget(pointID: p.id))
+                  child: PointWidget(pointID: p.id)),
+              if (kDebugMode)
+                Positioned(
+                    left: p.loc.dx,
+                    top: p.loc.dy,
+                    child: Text(state.getPointIndex(p.id).toString()))
+            ]
           ],
         ));
   }

@@ -45,6 +45,11 @@ class PositionedVector implements Comparable {
     return PositionedVector(from, positionVector / length + towards, false);
   }
 
+  PositionedVector translate(Offset direction) {
+    return PositionedVector(
+        from + direction, towards + direction, infiniteLength);
+  }
+
   /// Based on vector length. Implementation note: uses [Offset.distanceSquared]
   /// for performance
   @override
@@ -101,7 +106,7 @@ class PositionedVector implements Comparable {
       return null;
     } else if (thisT > 1 && !infiniteLength) {
       return null;
-    } else if (otherT > 1 && other.infiniteLength) {
+    } else if (otherT > 1 && !other.infiniteLength) {
       return null;
     } else {
       final scaledPosition = positionVector * thisT;
@@ -109,11 +114,10 @@ class PositionedVector implements Comparable {
     }
   }
 
-  Offset closestPointTo(Offset point) {
+  Offset closestPointOn(Offset point) {
     // Theory: to find the closest point on a line to an incoming point, project
     // along the vector that passes through the incoming point and is
     // perpendicular to this one.
-    final positionVector = towards - from;
     final rotatedPV = Offset(positionVector.dy, -positionVector.dx);
     final projVector = PositionedVector.pointSlope(
         point, rotatedPV.dy / rotatedPV.dx, double.infinity);
