@@ -1,14 +1,13 @@
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'RadiantVector.dart';
+import 'models.dart';
+import 'widgets.dart';
 
 void main() {
   runApp(const MyApp());
@@ -30,6 +29,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// Page that displays flexible frames that can hold images.
 class FramesPage extends StatefulWidget {
   const FramesPage({super.key, required this.title});
 
@@ -37,211 +37,6 @@ class FramesPage extends StatefulWidget {
 
   @override
   State<FramesPage> createState() => _FramesPageState();
-}
-
-/// Exits to be contained in [FrameModel].
-class PointModel {
-  Offset loc;
-  static int idStream = 0;
-  final int id;
-  PointModel(this.loc) : id = idStream++;
-}
-
-/// Describes a convex quadrilateral with points that can be manipulated via the
-/// [drag] method.
-class FrameModel {
-  late final List<PointModel> _points;
-  FrameModel(List<Offset> points) : assert(points.length == 4) {
-    _points = sortPointsCW([for (final p in points) PointModel(p)]);
-  }
-
-  /// Creates a very boring default frame.
-  factory FrameModel.square(
-      {Offset pos = const Offset(20, 20), int sideLength = 100}) {
-    return FrameModel([
-      pos,
-      Offset(pos.dx, pos.dy + sideLength),
-      Offset(pos.dx + sideLength, pos.dy),
-      Offset(pos.dx + sideLength, pos.dy + sideLength)
-    ]);
-  }
-
-  List<PointModel> get points {
-    return _points;
-  }
-
-  /// Sort the points in clockwise winding order so lines can be drawn between
-  /// them in order to reliably form a square and not like, disconnected crossed
-  /// line segments.
-  List<PointModel> sortPointsCW(List<PointModel> points) {
-    final sum = [for (final p in points) p.loc].reduce((o1, o2) => o1 + o2);
-    final average = sum / 4;
-    final cwPoints = [...points]..sort((o1, o2) =>
-        (o1.loc - average).direction.compareTo((o2.loc - average).direction));
-    return cwPoints;
-  }
-
-  int getPointIndex(int pointID) => points.indexWhere((p) => p.id == pointID);
-
-  /// Attempts to move the point to [aimTowards] while avoiding making the frame
-  /// a concave shape. This took a lot more math than expected...
-  void drag(int pointID, Offset aimTowards) {
-    final pointIndex = getPointIndex(pointID);
-    Offset opposite = points[(pointIndex + 2) % 4].loc;
-    Offset next = points[(pointIndex + 1) % 4].loc;
-    Offset prev = points[(pointIndex + 3) % 4].loc;
-    // do not go to the left of this one
-    final oppositeForward =
-        RadiantVector(opposite, prev, true).translate(prev - opposite);
-    // or the right of this one
-    final oppositeBackward =
-        RadiantVector(opposite, next, true).translate(next - opposite);
-    // or the left of this one.
-    final crossMember = RadiantVector(next, prev, false);
-    if (oppositeForward.onSideOf(aimTowards) == LineSide.left ||
-        oppositeBackward.onSideOf(aimTowards) == LineSide.right ||
-        crossMember.onSideOf(aimTowards) == LineSide.left) {
-      if (kDebugMode) {
-        log("mouse entering illegal zone D:<");
-        log("mouse at: $aimTowards");
-        log("opposite forward: $oppositeForward");
-        log("side thereof: ${oppositeForward.onSideOf(aimTowards)}");
-        log("opposite backward: $oppositeBackward");
-        log("side thereof: ${oppositeBackward.onSideOf(aimTowards)}");
-        log("cross member: $crossMember");
-        log("side thereof: ${crossMember.onSideOf(aimTowards)}");
-      }
-
-      // good lord
-      final closestPoints = [
-        ...[oppositeForward, oppositeBackward, crossMember]
-            .map((e) => e.closestPointOn(aimTowards))
-      ]..sort((p1, p2) => (p1 - aimTowards)
-          .distanceSquared
-          .compareTo((p2 - aimTowards).distanceSquared));
-      points[pointIndex].loc = closestPoints[0];
-    } else {
-      points[pointIndex].loc = aimTowards;
-    }
-  }
-}
-
-class FramesModel extends ChangeNotifier {
-  final List<FrameModel> frames;
-  final Map<int, FrameModel> _pointIndex = {};
-
-  /// Used to identify the [CustomPaint] widget whose local coordinate system we
-  /// need to use in both drawing and mouse positioning
-  final GlobalKey paintKey = GlobalKey(debugLabel: "The painty boy");
-
-  FramesModel() : frames = [FrameModel.square()] {
-    for (final frame in frames) {
-      for (final point in frame.points) {
-        _pointIndex[point.id] = frame;
-      }
-    }
-  }
-
-  void drag(int pointID, Offset position) {
-    final frame = _pointIndex[pointID];
-    if (frame != null) {
-      frame.drag(pointID, position);
-      notifyListeners();
-    }
-  }
-
-  /// This is a bit meaningless absent the context of the [FrameModel] but is
-  /// useful for debug output
-  int getPointIndex(int pointID) {
-    final frame = _pointIndex[pointID];
-    if (frame == null) {
-      return -1;
-    } else {
-      return frame.getPointIndex(pointID);
-    }
-  }
-}
-
-/// Draws a little circle to represent a moveable point; detects pointer events
-/// that want to move it and gets [FramesModel] to update the state based on
-/// them.
-class PointWidget extends StatelessWidget {
-  final int pointID;
-  static const int radius = 5;
-  const PointWidget({super.key, required this.pointID});
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanUpdate: (details) {
-        final state = Provider.of<FramesModel>(context, listen: false);
-        Offset? position =
-            (state.paintKey.currentContext?.findRenderObject() as RenderBox?)
-                ?.globalToLocal(details.globalPosition);
-        if (position != null) {
-          state.drag(pointID, position);
-        }
-      },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: radius * 2,
-          height: radius * 2,
-          decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black),
-              shape: BoxShape.circle),
-        ),
-      ),
-    );
-  }
-}
-
-/// Draws a [FrameModel] using a [FramePainter] and [PointWidget]s. And some
-/// [Text] when in debug mode
-class FrameWidget extends StatelessWidget {
-  final FrameModel frame;
-  const FrameWidget({Key? key, required this.frame}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final state = Provider.of<FramesModel>(context, listen: false);
-    return CustomPaint(
-        key: state.paintKey,
-        painter: FramePainter(frame),
-        child: Stack(
-          children: [
-            for (final p in frame.points) ...[
-              Positioned(
-                  left: p.loc.dx - PointWidget.radius,
-                  top: p.loc.dy - PointWidget.radius,
-                  child: PointWidget(pointID: p.id)),
-              if (kDebugMode)
-                Positioned(
-                    left: p.loc.dx,
-                    top: p.loc.dy,
-                    child: Text(state.getPointIndex(p.id).toString()))
-            ]
-          ],
-        ));
-  }
-}
-
-class FramePainter extends CustomPainter {
-  final style = Paint()..color = Colors.black;
-  final FrameModel frame;
-  FramePainter(this.frame);
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < 4; i++) {
-      canvas.drawLine(
-          frame.points[i].loc, frame.points[(i + 1) % 4].loc, style);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
-  }
 }
 
 class _FramesPageState extends State<FramesPage> {
@@ -279,29 +74,33 @@ class _FramesPageState extends State<FramesPage> {
         ),
         body: Center(
           child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DottedBorder(
               padding: const EdgeInsets.all(8.0),
-              child: DottedBorder(
-                padding: const EdgeInsets.all(8.0),
-                dashPattern: const [5],
-                child: _image == null
-                    ? TextButton(
-                        onPressed: getImage,
-                        child: const Text("Open Image"),
-                      )
-                    : ChangeNotifierProvider(
-                        create: (context) => FramesModel(),
-                        child: Consumer<FramesModel>(
-                            builder: (context, frames, child) =>
-                                Stack(children: [
-                                  _image as Widget,
-                                  ...[
-                                    for (final frame in frames.frames)
-                                      Positioned.fill(
-                                        child: FrameWidget(frame: frame),
-                                      )
-                                  ],
-                                ]))),
-              )),
+              dashPattern: const [5],
+              child: _image == null
+                  ? TextButton(
+                      onPressed: getImage,
+                      child: const Text("Open Image"),
+                    )
+                  : ChangeNotifierProvider(
+                      create: (context) => FramesModel(),
+                      child: Consumer<FramesModel>(
+                        builder: (context, frames, child) => Stack(
+                          children: [
+                            _image as Widget,
+                            ...[
+                              for (final frame in frames.frames)
+                                Positioned.fill(
+                                  child: FrameWidget(frame: frame),
+                                )
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
         ),
       ),
     );
