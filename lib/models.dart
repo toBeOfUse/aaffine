@@ -1,8 +1,11 @@
 import 'dart:developer';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:ml_linalg/linalg.dart';
+import 'package:vector_math/vector_math_64.dart' as vec;
 import 'radiant_vector.dart';
 
 /// Exits to be contained in [FrameModel].
@@ -16,39 +19,116 @@ class PointModel {
 /// Describes a convex quadrilateral with points that can be manipulated via the
 /// [drag] method and an possibly an [image] it wants to display. The points'
 /// coordinates are normalized, meaning they exist in the range [0, 1] and must
-/// be scaled horizontally and vertically to get pixel coordinates that
-/// correspond to however wide and tall the background image might currently be.
+/// be scaled horizontally and vertically by the width and height of the
+/// background image to get world-space pixel coordinates. This is so that
+/// resizing the window/image will not dislodge the points
 class FrameModel {
-  late final List<PointModel> _points;
-  Image? image;
-  FrameModel(List<Offset> points) : assert(points.length == 4) {
-    _points = sortPointsCW([for (final p in points) PointModel(p)]);
-  }
+  final List<PointModel> _points;
+  ui.Image? image;
 
-  /// Creates a very boring default frame.
-  factory FrameModel.square(
-      {Offset pos = const Offset(0.1, 0.1), double sideLength = 0.2}) {
-    return FrameModel([
-      pos,
-      Offset(pos.dx, pos.dy + sideLength),
-      Offset(pos.dx + sideLength, pos.dy),
-      Offset(pos.dx + sideLength, pos.dy + sideLength)
-    ]);
-  }
+  /// Creates a very boring default frame. Points are clockwise with the top
+  /// left first; N.B. all future constructors should follow this convention!!
+  FrameModel.square(
+      {Offset pos = const Offset(0.1, 0.1), double sideLength = 0.2})
+      : _points = [
+          pos,
+          Offset(pos.dx + sideLength, pos.dy),
+          Offset(pos.dx + sideLength, pos.dy + sideLength),
+          Offset(pos.dx, pos.dy + sideLength),
+        ].map((e) => PointModel(e)).toList();
 
   List<PointModel> get points {
     return _points;
   }
 
-  /// Sort the points in clockwise winding order so lines can be drawn between
-  /// them in order to reliably form a square and not like, disconnected crossed
-  /// line segments.
-  List<PointModel> sortPointsCW(List<PointModel> points) {
-    final sum = [for (final p in points) p.loc].reduce((o1, o2) => o1 + o2);
-    final average = sum / 4;
-    final cwPoints = [...points]..sort((o1, o2) =>
-        (o1.loc - average).direction.compareTo((o2.loc - average).direction));
-    return cwPoints;
+  /// ref: https://web.archive.org/web/20150222120106/xenia.media.mit.edu/~cwren/interpolator/
+  Matrix4? makeImageFit(double screenSpaceWidth, double screenSpaceHeight) {
+    final width = image?.width.toDouble();
+    final height = image?.height.toDouble();
+    if (width != null && height != null && !width.isNaN && !height.isNaN) {
+      /// bottom left first, like the output of [FrameModel.square]
+      final objectSpaceCoords = [
+        const Offset(0, 0),
+        Offset(width, 0),
+        Offset(width, height),
+        Offset(0, height),
+      ];
+      final worldSpaceCoords = [
+        for (final p in points) Offset(p.loc.dx, p.loc.dy)
+      ];
+      final imageSpaceDef = <List<double>>[];
+      for (var i = 0; i < 4; i++) {
+        final objectPoint = objectSpaceCoords[i];
+        final worldPoint = worldSpaceCoords[i];
+        imageSpaceDef.addAll([
+          [
+            objectPoint.dx,
+            objectPoint.dy,
+            1,
+            0,
+            0,
+            0,
+            -worldPoint.dx * objectPoint.dx,
+            -worldPoint.dx * objectPoint.dy
+          ],
+          [
+            0,
+            0,
+            0,
+            objectPoint.dx,
+            objectPoint.dy,
+            1,
+            -worldPoint.dy * objectPoint.dx,
+            -worldPoint.dy * objectPoint.dy
+          ]
+        ]);
+      }
+      final imageSpaceDefMatrix = Matrix.fromList(imageSpaceDef);
+      final worldColumnVector = Matrix.column([
+        for (final point in worldSpaceCoords) ...[point.dx, point.dy]
+      ]);
+      final transform =
+          (((imageSpaceDefMatrix.transpose() * imageSpaceDefMatrix).inverse() *
+                  imageSpaceDefMatrix.transpose()) *
+              worldColumnVector);
+      final transformData = [
+        ...[for (final row in transform.rows) ...row],
+        1.0
+      ];
+      final mat4 = Matrix4.identity();
+      for (var i = 0; i < 9; i++) {
+        var row = i ~/ 3;
+        var col = i % 3;
+        if (row == 2) {
+          row = 3;
+        }
+        if (col == 2) {
+          col = 3;
+        }
+        mat4.setEntry(row, col, transformData[i]);
+      }
+      // mat4.setEntry(3, 2, 1);
+      for (var i = 0; i < 4; i++) {
+        final point = objectSpaceCoords[i];
+        final wSpaceTest = [worldSpaceCoords[i].dx, worldSpaceCoords[i].dy];
+        final testResult = mat4 * vec.Vector4(point.dx, point.dy, 0, 1);
+        final divW = [
+          testResult[0] / testResult[3],
+          testResult[1] / testResult[3]
+        ];
+        if ((wSpaceTest[0] - divW[0]).abs() > 0.001 ||
+            (wSpaceTest[1] - divW[1]).abs() > 0.001) {
+          log("alert: things wrong");
+          log("object space coords: ${[point.dx, point.dy]}");
+          log("actual world space coords: $wSpaceTest");
+          log("coords we got: $divW");
+        }
+      }
+      final scale = Matrix4.diagonal3(vec.Vector3(screenSpaceWidth, screenSpaceHeight, 1));
+      return scale * mat4;
+    } else {
+      return null;
+    }
   }
 
   int getPointIndex(int pointID) => points.indexWhere((p) => p.id == pointID);
@@ -126,7 +206,7 @@ class FramesModel extends ChangeNotifier {
     }
   }
 
-  void addImage(FrameModel frame, Image image) {
+  void addImage(FrameModel frame, ui.Image image) {
     if (frames.contains(frame)) {
       frame.image = image;
       notifyListeners();

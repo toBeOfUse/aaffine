@@ -44,11 +44,9 @@ class _FramesPageState extends State<FramesPage> {
   Image? _image;
 
   void openImage() async {
-    final image = await getImage();
-    log("called getImage");
+    final image = await getImageWidget();
     if (image != null) {
       setState(() {
-        log("received image");
         _image = image;
       });
     }
