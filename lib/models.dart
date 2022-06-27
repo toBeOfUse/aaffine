@@ -8,6 +8,10 @@ import 'package:ml_linalg/linalg.dart';
 import 'package:vector_math/vector_math_64.dart' as vec;
 import 'radiant_vector.dart';
 
+/// Used with Canvas.drawImage()
+typedef DecodedImage = ui.Image;
+typedef ImageWidget = Image;
+
 /// Exits to be contained in [FrameModel].
 class PointModel {
   Offset loc;
@@ -24,7 +28,7 @@ class PointModel {
 /// resizing the window/image will not dislodge the points
 class FrameModel {
   final List<PointModel> _points;
-  ui.Image? image;
+  DecodedImage? image;
 
   /// Creates a very boring default frame. Points are clockwise with the top
   /// left first; N.B. all future constructors should follow this convention!!
@@ -41,12 +45,22 @@ class FrameModel {
     return _points;
   }
 
-  /// ref: https://web.archive.org/web/20150222120106/xenia.media.mit.edu/~cwren/interpolator/
+  /// Outputs a matrix that will take an image from "object space" (the
+  /// pixel-based coordinate system where the top left of the image is at (0,0)
+  /// and the bottom left corner is at (frame.image.width, frame.image.height))
+  /// into "world space" (the coordinate system where the top left of the image
+  /// is at the first point in _points and so on around the points/corners,
+  /// clockwise) and then into "screen space" (same as before except all the
+  /// points/corners are located at the pixel coordinates of where the points
+  /// are actually located on the canvas we're going to draw on.) main ref:
+  /// https://web.archive.org/web/20150222120106/xenia.media.mit.edu/~cwren/interpolator/
+  ///
+  /// Returns: null if this.image is null; a [Matrix4] otherwise.
   Matrix4? makeImageFit(double screenSpaceWidth, double screenSpaceHeight) {
     final width = image?.width.toDouble();
     final height = image?.height.toDouble();
     if (width != null && height != null && !width.isNaN && !height.isNaN) {
-      /// bottom left first, like the output of [FrameModel.square]
+      /// top left first, like the output of [FrameModel.square]
       final objectSpaceCoords = [
         const Offset(0, 0),
         Offset(width, 0),
@@ -107,24 +121,26 @@ class FrameModel {
         }
         mat4.setEntry(row, col, transformData[i]);
       }
-      // mat4.setEntry(3, 2, 1);
-      for (var i = 0; i < 4; i++) {
-        final point = objectSpaceCoords[i];
-        final wSpaceTest = [worldSpaceCoords[i].dx, worldSpaceCoords[i].dy];
-        final testResult = mat4 * vec.Vector4(point.dx, point.dy, 0, 1);
-        final divW = [
-          testResult[0] / testResult[3],
-          testResult[1] / testResult[3]
-        ];
-        if ((wSpaceTest[0] - divW[0]).abs() > 0.001 ||
-            (wSpaceTest[1] - divW[1]).abs() > 0.001) {
-          log("alert: things wrong");
-          log("object space coords: ${[point.dx, point.dy]}");
-          log("actual world space coords: $wSpaceTest");
-          log("coords we got: $divW");
+      if (kDebugMode) {
+        for (var i = 0; i < 4; i++) {
+          final point = objectSpaceCoords[i];
+          final wSpaceTest = [worldSpaceCoords[i].dx, worldSpaceCoords[i].dy];
+          final testResult = mat4 * vec.Vector4(point.dx, point.dy, 0, 1);
+          final divW = [
+            testResult[0] / testResult[3],
+            testResult[1] / testResult[3]
+          ];
+          if ((wSpaceTest[0] - divW[0]).abs() > 0.001 ||
+              (wSpaceTest[1] - divW[1]).abs() > 0.001) {
+            log("alert: things wrong");
+            log("object space coords: ${[point.dx, point.dy]}");
+            log("actual world space coords: $wSpaceTest");
+            log("coords we got: $divW");
+          }
         }
       }
-      final scale = Matrix4.diagonal3(vec.Vector3(screenSpaceWidth, screenSpaceHeight, 1));
+      final scale = Matrix4.diagonal3(
+          vec.Vector3(screenSpaceWidth, screenSpaceHeight, 1));
       return scale * mat4;
     } else {
       return null;
@@ -206,7 +222,7 @@ class FramesModel extends ChangeNotifier {
     }
   }
 
-  void addImage(FrameModel frame, ui.Image image) {
+  void addImage(FrameModel frame, DecodedImage image) {
     if (frames.contains(frame)) {
       frame.image = image;
       notifyListeners();

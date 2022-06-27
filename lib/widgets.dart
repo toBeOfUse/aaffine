@@ -1,14 +1,10 @@
 import 'dart:developer';
-import 'dart:io';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
+import 'dart:ui';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vector_math/vector_math_64.dart' as vec;
 
 import 'models.dart';
 
@@ -22,28 +18,24 @@ Future<Uint8List?> getImageBytes() async {
   return null;
 }
 
-Future<ui.Image?> getImage() async {
+Future<DecodedImage?> getImage() async {
   final bytes = await getImageBytes();
   if (bytes != null) {
     try {
-      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final Codec codec = await instantiateImageCodec(bytes);
       return (await codec.getNextFrame()).image;
     } catch (e) {
-      log("could not load image");
+      log("could not load image", level: 500);
       log(e.toString());
     }
   }
   return null;
 }
 
-Future<Image?> getImageWidget({small = false}) async {
+Future<ImageWidget?> getImageWidget() async {
   final bytes = await getImageBytes();
-  log("got bytes");
   if (bytes != null) {
-    return Image.memory(bytes,
-        filterQuality: ui.FilterQuality.medium,
-        width: small ? 100 : null,
-        height: small ? 100 : null);
+    return ImageWidget.memory(bytes, filterQuality: FilterQuality.medium);
   }
   return null;
 }
@@ -114,28 +106,15 @@ class FrameWidget extends StatelessWidget {
           }
           final openPos = Offset(
               openButtonPoint.dx, openButtonPoint.dy + openButtonYOffset);
-          // final imageTransform = frame.makeImageFit();
           return OverflowBox(
               maxWidth: pointAreaWidth,
               maxHeight: pointAreaHeight,
               child: Stack(
                 children: [
-                  // if (frame.image != null && imageTransform != null)
-                  //   Transform(
-                  //       transform: Matrix4.identity(), child: frame.image),
                   for (final point in frame.points) ...[
                     Align(
                         alignment: FractionalOffset(point.loc.dx, point.loc.dy),
                         child: PointWidget(pointID: point.id)),
-                    // if (kDebugMode)
-                    //   Align(
-                    //       alignment: FractionalOffset(
-                    //           point.loc.dx,
-                    //           point.loc.dy +
-                    //               PointWidget.radius *
-                    //                   2 /
-                    //                   constraints.maxHeight),
-                    //       child: Text(state.getPointIndex(point.id).toString()))
                   ],
                   if (!openPos.dx.isNaN && !openPos.dy.isNaN)
                     Positioned(
@@ -175,22 +154,25 @@ class FramePainter extends CustomPainter {
   final style = Paint()..color = Colors.black;
   final FrameModel frame;
   FramePainter(this.frame);
+
+  Float64List getF64L(Matrix4 m) {
+    return Float64List.fromList(
+        [for (var i = 0; i < 4; i++) ...m.getColumn(i).storage]);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     for (int i = 0; i < 4; i++) {
       canvas.drawLine(frame.points[i].loc.scale(size.width, size.height),
           frame.points[(i + 1) % 4].loc.scale(size.width, size.height), style);
     }
+
     final tf = frame.makeImageFit(size.width, size.height);
     final image = frame.image;
-    Float64List getF64L(Matrix4 m) {
-      return Float64List.fromList(
-          [for (var i = 0; i < 4; i++) ...m.getColumn(i).storage]);
-    }
-
     if (tf != null && image != null) {
       canvas.transform(getF64L(tf));
-      canvas.drawImage(image, Offset.zero, Paint());
+      canvas.drawImage(
+          image, Offset.zero, Paint()..filterQuality = FilterQuality.medium);
     }
   }
 
