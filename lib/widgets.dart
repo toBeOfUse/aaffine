@@ -70,48 +70,42 @@ class FrameWidget extends StatelessWidget {
       painter: FramePainter(frame),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          log("points: ${[
-            for (final p in frame.points) [p.loc.dx, p.loc.dy]
-          ]}");
-          log("PointWidget radius: ${PointWidget.radius}");
-          final xAdjust = PointWidget.radius / constraints.maxWidth;
-          log("PointWidget radius as fraction of width: $xAdjust");
-          final yAdjust = PointWidget.radius / constraints.maxHeight;
-          log("PointWidget radius as fraction of height: $yAdjust");
-          final adjusted = [
-            for (final p in frame.points)
-              Offset(p.loc.dx - xAdjust, p.loc.dy - yAdjust)
-          ];
-          log("adjusted points: ${[
-            for (final p in adjusted) [p.dx, p.dy]
-          ]}");
-          log("box size: ${Offset(constraints.maxWidth, constraints.maxHeight)}");
-          return Stack(
-            children: [
-              for (var i = 0; i < 4; i++) ...[
-                Align(
-                    alignment: FractionalOffset(
-                        frame.points[i].loc.dx, frame.points[i].loc.dy),
-                    child: PointWidget(pointID: frame.points[i].id)),
-                if (kDebugMode)
-                  Align(
-                      alignment: FractionalOffset(
-                          adjusted[i].dx,
-                          adjusted[i].dy +
-                              PointWidget.radius * 2 / constraints.maxHeight),
-                      child: Text(
-                          state.getPointIndex(frame.points[i].id).toString()))
-              ],
-              IconButton(
-                  onPressed: () async {
-                    final image = await getImage();
-                    if (image != null) {
-                      state.addImage(frame, image);
-                    }
-                  },
-                  icon: const Icon(Icons.folder_outlined))
-            ],
-          );
+          // the box in which the PointWidgets can be rendered has to be bigger
+          // than this container so that the centers of the points can be at the
+          // edges of the image meaning that the sides of the points are off the
+          // edge of the image
+          final pointAreaWidth = constraints.maxWidth + PointWidget.radius * 2;
+          final pointAreaHeight =
+              constraints.maxHeight + PointWidget.radius * 2;
+          return OverflowBox(
+              maxWidth: pointAreaWidth,
+              maxHeight: pointAreaHeight,
+              child: Stack(
+                children: [
+                  for (final point in frame.points) ...[
+                    Align(
+                        alignment: FractionalOffset(point.loc.dx, point.loc.dy),
+                        child: PointWidget(pointID: point.id)),
+                    if (kDebugMode)
+                      Align(
+                          alignment: FractionalOffset(
+                              point.loc.dx,
+                              point.loc.dy +
+                                  PointWidget.radius *
+                                      2 /
+                                      constraints.maxHeight),
+                          child: Text(state.getPointIndex(point.id).toString()))
+                  ],
+                  IconButton(
+                      onPressed: () async {
+                        final image = await getImage();
+                        if (image != null) {
+                          state.addImage(frame, image);
+                        }
+                      },
+                      icon: const Icon(Icons.folder_outlined))
+                ],
+              ));
         },
       ),
     );
