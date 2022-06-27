@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const FramesPage(title: '3D Frames'),
+      home: const FramesPage(title: 'Perspective'),
     );
   }
 }
@@ -42,16 +43,14 @@ class FramesPage extends StatefulWidget {
 class _FramesPageState extends State<FramesPage> {
   Image? _image;
 
-  void getImage() async {
-    FilePickerResult? result =
-        await FilePicker.platform.pickFiles(type: FileType.image);
-    if (result != null && result.count > 0) {
-      String? path = result.files.first.path;
-      if (path != null) {
-        setState(() {
-          _image = Image.file(File(path), filterQuality: FilterQuality.medium);
-        });
-      }
+  void openImage() async {
+    final image = await getImage();
+    log("called getImage");
+    if (image != null) {
+      setState(() {
+        log("received image");
+        _image = image;
+      });
     }
   }
 
@@ -80,7 +79,7 @@ class _FramesPageState extends State<FramesPage> {
               dashPattern: const [5],
               child: _image == null
                   ? TextButton(
-                      onPressed: getImage,
+                      onPressed: openImage,
                       child: const Text("Open Image"),
                     )
                   : ChangeNotifierProvider(

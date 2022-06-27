@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -13,7 +14,10 @@ class PointModel {
 }
 
 /// Describes a convex quadrilateral with points that can be manipulated via the
-/// [drag] method and an possibly an [image] it wants to display.
+/// [drag] method and an possibly an [image] it wants to display. The points'
+/// coordinates are normalized, meaning they exist in the range [0, 1] and must
+/// be scaled horizontally and vertically to get pixel coordinates that
+/// correspond to however wide and tall the background image might currently be.
 class FrameModel {
   late final List<PointModel> _points;
   Image? image;
@@ -23,7 +27,7 @@ class FrameModel {
 
   /// Creates a very boring default frame.
   factory FrameModel.square(
-      {Offset pos = const Offset(20, 20), int sideLength = 100}) {
+      {Offset pos = const Offset(0.1, 0.1), double sideLength = 0.2}) {
     return FrameModel([
       pos,
       Offset(pos.dx, pos.dy + sideLength),
@@ -53,6 +57,7 @@ class FrameModel {
   /// a concave shape. This took a lot more math than expected...
   void drag(int pointID, Offset aimTowards) {
     final pointIndex = getPointIndex(pointID);
+
     Offset opposite = points[(pointIndex + 2) % 4].loc;
     Offset next = points[(pointIndex + 1) % 4].loc;
     Offset prev = points[(pointIndex + 3) % 4].loc;
@@ -89,6 +94,9 @@ class FrameModel {
     } else {
       points[pointIndex].loc = aimTowards;
     }
+    final result = points[pointIndex].loc;
+    double bounds(double a) => math.min(1, math.max(0, a));
+    points[pointIndex].loc = Offset(bounds(result.dx), bounds(result.dy));
   }
 }
 
@@ -99,6 +107,8 @@ class FramesModel extends ChangeNotifier {
   /// Used to identify the [CustomPaint] widget whose local coordinate system we
   /// need to use in both drawing and mouse positioning
   final GlobalKey paintKey = GlobalKey(debugLabel: "The painty boy");
+  RenderBox? get paintBox =>
+      paintKey.currentContext?.findRenderObject() as RenderBox?;
 
   FramesModel() : frames = [FrameModel.square()] {
     for (final frame in frames) {
@@ -112,6 +122,13 @@ class FramesModel extends ChangeNotifier {
     final frame = _pointIndex[pointID];
     if (frame != null) {
       frame.drag(pointID, position);
+      notifyListeners();
+    }
+  }
+
+  void addImage(FrameModel frame, Image image) {
+    if (frames.contains(frame)) {
+      frame.image = image;
       notifyListeners();
     }
   }
