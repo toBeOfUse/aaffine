@@ -86,14 +86,14 @@ class FrameWidget extends StatelessWidget {
     final state = Provider.of<FramesModel>(context, listen: false);
     return CustomPaint(
       key: state.paintKey,
-      painter: FramePainter(frame),
+      painter: FramePainter(frame, state.showingLines),
       child: LayoutBuilder(
         builder: (context, constraints) {
           // the box in which the PointWidgets can be rendered has to be bigger
           // than this container so that the centers of the points can be at the
           // edges of the image meaning that the sides of the points are off the
           // edge of the image
-          const openButtonSize = 20.0;
+          const openButtonSize = 30.0;
           final pointAreaWidth = constraints.maxWidth + PointWidget.radius * 2;
           final pointAreaHeight =
               constraints.maxHeight + PointWidget.radius * 2;
@@ -111,24 +111,27 @@ class FrameWidget extends StatelessWidget {
               maxHeight: pointAreaHeight,
               child: Stack(
                 children: [
-                  for (final point in frame.points) ...[
-                    Align(
-                        alignment: FractionalOffset(point.loc.dx, point.loc.dy),
-                        child: PointWidget(pointID: point.id)),
-                  ],
-                  if (!openPos.dx.isNaN && !openPos.dy.isNaN)
+                  if (state.showingLines)
+                    for (final point in frame.points) ...[
+                      Align(
+                          alignment:
+                              FractionalOffset(point.loc.dx, point.loc.dy),
+                          child: PointWidget(pointID: point.id)),
+                    ],
+                  if (!openPos.dx.isNaN &&
+                      !openPos.dy.isNaN &&
+                      state.showingLines)
                     Positioned(
                       left: openPos.dx,
                       top: openPos.dy,
                       child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.lightBlue[200],
+                        decoration: const BoxDecoration(
+                          color: Colors.white24,
                           shape: BoxShape.rectangle,
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(2.0)),
+                          borderRadius: BorderRadius.all(Radius.circular(2.0)),
                         ),
                         child: IconButton(
-                            padding: const EdgeInsets.all(0),
+                            padding: const EdgeInsets.all(2),
                             constraints: const BoxConstraints(
                                 maxWidth: openButtonSize,
                                 maxHeight: openButtonSize),
@@ -153,7 +156,8 @@ class FrameWidget extends StatelessWidget {
 class FramePainter extends CustomPainter {
   final style = Paint()..color = Colors.black;
   final FrameModel frame;
-  FramePainter(this.frame);
+  final bool drawLines;
+  FramePainter(this.frame, this.drawLines);
 
   Float64List getF64L(Matrix4 m) {
     return Float64List.fromList(
@@ -162,9 +166,13 @@ class FramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < 4; i++) {
-      canvas.drawLine(frame.points[i].loc.scale(size.width, size.height),
-          frame.points[(i + 1) % 4].loc.scale(size.width, size.height), style);
+    if (drawLines) {
+      for (int i = 0; i < 4; i++) {
+        canvas.drawLine(
+            frame.points[i].loc.scale(size.width, size.height),
+            frame.points[(i + 1) % 4].loc.scale(size.width, size.height),
+            style);
+      }
     }
 
     final tf = frame.makeImageFit(size.width, size.height);

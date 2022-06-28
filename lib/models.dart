@@ -28,6 +28,7 @@ class PointModel {
 /// resizing the window/image will not dislodge the points
 class FrameModel {
   final List<PointModel> _points;
+  static int frameCount = 0;
   DecodedImage? image;
 
   /// Creates a very boring default frame. Points are clockwise with the top
@@ -39,7 +40,13 @@ class FrameModel {
           Offset(pos.dx + sideLength, pos.dy),
           Offset(pos.dx + sideLength, pos.dy + sideLength),
           Offset(pos.dx, pos.dy + sideLength),
-        ].map((e) => PointModel(e)).toList();
+        ].map((e) => PointModel(e)).toList() {
+    frameCount++;
+  }
+  factory FrameModel.overlapAvoidingSquare() {
+    return FrameModel.square(
+        pos: Offset(0.1 + 0.05 * frameCount, 0.1 + 0.05 * frameCount));
+  }
 
   List<PointModel> get points {
     return _points;
@@ -199,6 +206,7 @@ class FrameModel {
 class FramesModel extends ChangeNotifier {
   final List<FrameModel> frames;
   final Map<int, FrameModel> _pointIndex = {};
+  bool showingLines = true;
 
   /// Used to identify the [CustomPaint] widget whose local coordinate system we
   /// need to use in both drawing and mouse positioning
@@ -227,6 +235,12 @@ class FramesModel extends ChangeNotifier {
       frame.image = image;
       notifyListeners();
     }
+  }
+
+
+  void toggleLines() {
+    showingLines = !showingLines;
+    notifyListeners();
   }
 
   /// This is a bit meaningless absent the context of the [FrameModel] but is

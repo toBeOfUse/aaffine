@@ -51,51 +51,88 @@ class _FramesPageState extends State<FramesPage> {
   @override
   Widget build(BuildContext context) {
     return Focus(
-      onKeyEvent: (FocusNode f, KeyEvent k) {
-        if (k.logicalKey == LogicalKeyboardKey.escape) {
-          setState(() {
-            _image = null;
-          });
-          return KeyEventResult.handled;
-        } else {
-          return KeyEventResult.ignored;
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: DottedBorder(
+        onKeyEvent: (FocusNode f, KeyEvent k) {
+          if (k.logicalKey == LogicalKeyboardKey.escape) {
+            setState(() {
+              _image = null;
+            });
+            return KeyEventResult.handled;
+          } else {
+            return KeyEventResult.ignored;
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(widget.title),
+          ),
+          body: Center(
+            child: Padding(
               padding: const EdgeInsets.all(8.0),
-              dashPattern: const [5],
-              child: _image == null
-                  ? TextButton(
-                      onPressed: openImage,
-                      child: const Text("Open Image"),
-                    )
-                  : ChangeNotifierProvider(
-                      create: (context) => FramesModel(),
-                      child: Consumer<FramesModel>(
-                        builder: (context, frames, child) => Stack(
-                          children: [
-                            _image as Widget,
-                            ...[
-                              for (final frame in frames.frames)
-                                Positioned.fill(
-                                  child: FrameWidget(frame: frame),
-                                )
+              child: DottedBorder(
+                padding: const EdgeInsets.all(8.0),
+                dashPattern: const [5],
+                child: _image == null
+                    ? TextButton(
+                        onPressed: openImage,
+                        child: const Text("Open Image"),
+                      )
+                    : ChangeNotifierProvider(
+                        create: (context) => FramesModel(),
+                        child: Consumer<FramesModel>(
+                          builder: (context, frames, child) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Flexible(
+                                  child: Stack(
+                                children: [
+                                  _image as Widget,
+                                  ...[
+                                    for (final frame in frames.frames)
+                                      Positioned.fill(
+                                        child: FrameWidget(frame: frame),
+                                      )
+                                  ],
+                                ],
+                              )),
+                              Container(
+                                  color: Colors.black12,
+                                  padding:
+                                      const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                                  margin: const EdgeInsets.fromLTRB(0, 5, 0, 0),
+                                  child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          splashRadius: 25,
+                                          tooltip:
+                                              "Save the image we've created",
+                                          icon: const Icon(Icons.save_outlined),
+                                          onPressed: () {},
+                                        ),
+                                        IconButton(
+                                          splashRadius: 25,
+                                          tooltip:
+                                              "Show the flexible frames for editing",
+                                          icon: Icon(frames.showingLines
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off),
+                                          onPressed: () => frames.toggleLines(),
+                                        ),
+                                        IconButton(
+                                          splashRadius: 25,
+                                          tooltip: "Add a new frame",
+                                          icon: const Icon(Icons.add),
+                                          onPressed: () => frames.addFrame(),
+                                        ),
+                                      ]))
                             ],
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 }
