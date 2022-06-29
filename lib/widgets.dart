@@ -57,7 +57,7 @@ class PointWidget extends StatelessWidget {
           Offset position = box.globalToLocal(details.globalPosition);
           position = Offset(
               position.dx / box.size.width, position.dy / box.size.height);
-          state.drag(pointID, position);
+          state.dragPoint(pointID, position);
         }
       },
       child: MouseRegion(
@@ -118,9 +118,11 @@ class FramePainter extends CustomPainter {
   }
 }
 
-class FloatingFrameButton extends IconButton {
+class FloatingFrameButton extends StatelessWidget {
+  final GestureTapCallback onPressed;
+  final Icon icon;
   const FloatingFrameButton(
-      {required super.onPressed, required super.icon, super.key});
+      {required this.onPressed, required this.icon, super.key});
   final buttonSize = 30.0;
   @override
   Widget build(BuildContext context) {
@@ -185,6 +187,16 @@ class FrameWidget extends StatelessWidget {
                         borderRadius: BorderRadius.all(Radius.circular(2.0)),
                       ),
                       child: Row(children: [
+                        GestureDetector(
+                            onPanUpdate: (details) {
+                              final state = Provider.of<FrameCollection>(
+                                  context,
+                                  listen: false);
+                              state.dragFrame(frame, details.delta);
+                            },
+                            child: FloatingFrameButton(
+                                onPressed: () {},
+                                icon: const Icon(Icons.open_with_outlined))),
                         FloatingFrameButton(
                             onPressed: () async {
                               final image = await getImage();

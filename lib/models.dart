@@ -21,7 +21,7 @@ class PointModel {
 }
 
 /// Describes a convex quadrilateral with points that can be manipulated via the
-/// [drag] method and an possibly an [image] it wants to display. The points'
+/// [dragPoint] method and an possibly an [image] it wants to display. The points'
 /// coordinates are normalized, meaning they exist in the range [0, 1] and must
 /// be scaled horizontally and vertically by the width and height of the
 /// background image to get world-space pixel coordinates. This is so that
@@ -158,7 +158,7 @@ class FrameModel {
 
   /// Attempts to move the point to [aimTowards] while avoiding making the frame
   /// a concave shape. This took a lot more math than expected...
-  void drag(int pointID, Offset aimTowards) {
+  void dragPoint(int pointID, Offset aimTowards) {
     final pointIndex = getPointIndex(pointID);
 
     Offset opposite = points[(pointIndex + 2) % 4].loc;
@@ -201,6 +201,32 @@ class FrameModel {
     double bounds(double a) => math.min(1, math.max(0, a));
     points[pointIndex].loc = Offset(bounds(result.dx), bounds(result.dy));
   }
+
+  void move(Offset delta) {
+    final topLeft = points.fold<Offset>(
+        Offset.infinite,
+        (Offset o, PointModel p) =>
+            Offset(math.min(o.dx, p.loc.dx), math.min(o.dy, p.loc.dy)));
+    final bottomRight = points.fold<Offset>(
+        Offset.zero,
+        (Offset o, PointModel p) =>
+            Offset(math.max(o.dx, p.loc.dx), math.max(o.dy, p.loc.dy)));
+    if (topLeft.dx + delta.dx < 0) {
+      delta = Offset(-topLeft.dx, delta.dy);
+    }
+    if (topLeft.dy + delta.dy < 0) {
+      delta = Offset(delta.dx, -topLeft.dy);
+    }
+    if (bottomRight.dx + delta.dx > 1) {
+      delta = Offset(1 - bottomRight.dx, delta.dy);
+    }
+    if (bottomRight.dy + delta.dy > 1) {
+      delta = Offset(delta.dx, 1 - bottomRight.dy);
+    }
+    for (final point in points) {
+      point.loc += delta;
+    }
+  }
 }
 
 class FrameCollection extends ChangeNotifier {
@@ -218,10 +244,18 @@ class FrameCollection extends ChangeNotifier {
     addFrame(FrameModel.square());
   }
 
-  void drag(int pointID, Offset position) {
+  void dragPoint(int pointID, Offset position) {
     final frame = _pointIndex[pointID];
     if (frame != null) {
-      frame.drag(pointID, position);
+      frame.dragPoint(pointID, position);
+      notifyListeners();
+    }
+  }
+
+  void dragFrame(FrameModel frame, Offset delta) {
+    final box = paintBox?.size;
+    if (box != null) {
+      frame.move(Offset(delta.dx / box.width, delta.dy / box.height));
       notifyListeners();
     }
   }
