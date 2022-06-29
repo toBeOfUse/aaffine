@@ -242,6 +242,14 @@ class FrameCollection extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeFrame(FrameModel del) {
+    for (final point in del.points) {
+      _pointIndex.remove(point.id);
+    }
+    frames.remove(del);
+    notifyListeners();
+  }
+
   void toggleLines() {
     showingLines = !showingLines;
     notifyListeners();

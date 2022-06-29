@@ -118,6 +118,22 @@ class FramePainter extends CustomPainter {
   }
 }
 
+class FloatingFrameButton extends IconButton {
+  const FloatingFrameButton(
+      {required super.onPressed, required super.icon, super.key});
+  final buttonSize = 30.0;
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+        padding: const EdgeInsets.all(2),
+        constraints:
+            BoxConstraints(maxWidth: buttonSize, maxHeight: buttonSize),
+        iconSize: buttonSize * 0.8,
+        onPressed: onPressed,
+        icon: icon);
+  }
+}
+
 /// Builds the draggable points, open image button, and other interactible
 /// components for [this.frame].
 class FrameWidget extends StatelessWidget {
@@ -144,6 +160,7 @@ class FrameWidget extends StatelessWidget {
         }
         final openPos =
             Offset(openButtonPoint.dx, openButtonPoint.dy + openButtonYOffset);
+
         return OverflowBox(
             maxWidth: pointAreaWidth,
             maxHeight: pointAreaHeight,
@@ -167,19 +184,21 @@ class FrameWidget extends StatelessWidget {
                         shape: BoxShape.rectangle,
                         borderRadius: BorderRadius.all(Radius.circular(2.0)),
                       ),
-                      child: IconButton(
-                          padding: const EdgeInsets.all(2),
-                          constraints: const BoxConstraints(
-                              maxWidth: openButtonSize,
-                              maxHeight: openButtonSize),
-                          iconSize: openButtonSize * 0.8,
-                          onPressed: () async {
-                            final image = await getImage();
-                            if (image != null) {
-                              state.addImage(frame, image);
-                            }
-                          },
-                          icon: const Icon(Icons.folder_outlined)),
+                      child: Row(children: [
+                        FloatingFrameButton(
+                            onPressed: () async {
+                              final image = await getImage();
+                              if (image != null) {
+                                state.addImage(frame, image);
+                              }
+                            },
+                            icon: const Icon(Icons.folder_outlined)),
+                        FloatingFrameButton(
+                            onPressed: () {
+                              state.removeFrame(frame);
+                            },
+                            icon: const Icon(Icons.delete_outlined))
+                      ]),
                     ),
                   ),
               ],
