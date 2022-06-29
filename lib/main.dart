@@ -1,7 +1,14 @@
+import 'save_image/web_save.dart'
+    if (dart.library.io) "save_image/desktop_save.dart";
+
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
 import 'models.dart';
 import 'widgets.dart';
@@ -46,6 +53,31 @@ class _FramesPageState extends State<FramesPage> {
         _image = image;
       });
     }
+  }
+
+  void saveResult(List<FrameModel> frames) {
+    final provider = _image?.image;
+    if (provider == null) {
+      return;
+    }
+    provider.resolve(const ImageConfiguration()).addListener(
+        ImageStreamListener((ImageInfo imageInfo, bool synchronousCall) async {
+      final image = imageInfo.image;
+      final recorder = PictureRecorder();
+      Canvas c = Canvas(recorder);
+      c.drawImage(
+          image, Offset.zero, Paint()..filterQuality = FilterQuality.high);
+      FramePainter(frames, false, FilterQuality.high)
+          .paint(c, Size(image.width.toDouble(), image.height.toDouble()));
+      final result =
+          await recorder.endRecording().toImage(image.width, image.height);
+      if (kIsWeb ||
+          (Platform.isLinux || Platform.isMacOS || Platform.isWindows)) {
+        saveImage(result);
+      } else {
+        throw UnimplementedError("Not portable to mobile phones yet. Sorry 🥺");
+      }
+    }));
   }
 
   @override
@@ -105,7 +137,8 @@ class _FramesPageState extends State<FramesPage> {
                                           tooltip:
                                               "Save the image we've created",
                                           icon: const Icon(Icons.save_outlined),
-                                          onPressed: () {},
+                                          onPressed: () =>
+                                              saveResult(frames.frames),
                                         ),
                                         IconButton(
                                           splashRadius: 25,
