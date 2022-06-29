@@ -203,7 +203,7 @@ class FrameModel {
   }
 }
 
-class FramesModel extends ChangeNotifier {
+class FrameCollection extends ChangeNotifier {
   final List<FrameModel> frames;
   final Map<int, FrameModel> _pointIndex = {};
   bool showingLines = true;
@@ -214,12 +214,8 @@ class FramesModel extends ChangeNotifier {
   RenderBox? get paintBox =>
       paintKey.currentContext?.findRenderObject() as RenderBox?;
 
-  FramesModel() : frames = [FrameModel.square()] {
-    for (final frame in frames) {
-      for (final point in frame.points) {
-        _pointIndex[point.id] = frame;
-      }
-    }
+  FrameCollection() : frames = [] {
+    addFrame(FrameModel.square());
   }
 
   void drag(int pointID, Offset position) {
@@ -237,6 +233,14 @@ class FramesModel extends ChangeNotifier {
     }
   }
 
+  void addFrame([FrameModel? newFrame]) {
+    newFrame = newFrame ?? FrameModel.overlapAvoidingSquare();
+    for (final point in newFrame.points) {
+      _pointIndex[point.id] = newFrame;
+    }
+    frames.add(newFrame);
+    notifyListeners();
+  }
 
   void toggleLines() {
     showingLines = !showingLines;

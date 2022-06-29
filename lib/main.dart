@@ -77,8 +77,8 @@ class _FramesPageState extends State<FramesPage> {
                         child: const Text("Open Image"),
                       )
                     : ChangeNotifierProvider(
-                        create: (context) => FramesModel(),
-                        child: Consumer<FramesModel>(
+                        create: (context) => FrameCollection(),
+                        child: Consumer<FrameCollection>(
                           builder: (context, frames, child) => Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -86,12 +86,9 @@ class _FramesPageState extends State<FramesPage> {
                                   child: Stack(
                                 children: [
                                   _image as Widget,
-                                  ...[
-                                    for (final frame in frames.frames)
-                                      Positioned.fill(
-                                        child: FrameWidget(frame: frame),
-                                      )
-                                  ],
+                                  const Positioned.fill(
+                                    child: FrameLayer(),
+                                  )
                                 ],
                               )),
                               Container(
@@ -116,7 +113,7 @@ class _FramesPageState extends State<FramesPage> {
                                               "Show the flexible frames for editing",
                                           icon: Icon(frames.showingLines
                                               ? Icons.visibility_outlined
-                                              : Icons.visibility_off),
+                                              : Icons.visibility_off_outlined),
                                           onPressed: () => frames.toggleLines(),
                                         ),
                                         IconButton(
