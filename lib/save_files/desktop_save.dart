@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -16,6 +16,16 @@ void saveImage(Image image) async {
     if (bytes == null) {
       throw const FormatException("Could not write result image to bytes");
     }
-    File(path).writeAsBytes(bytes, flush: true);
+    await File(path).writeAsBytes(bytes, flush: true);
+  }
+}
+
+void saveJSON(Map<String, dynamic> json) async {
+  final path = await FilePicker.platform.saveFile(
+      dialogTitle: "Save JSON",
+      type: FileType.custom,
+      allowedExtensions: ["json"]);
+  if (path != null) {
+    await File(path).writeAsString(jsonEncode(json), flush: true);
   }
 }

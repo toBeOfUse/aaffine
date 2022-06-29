@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:html';
 import 'dart:ui' show Image, ImageByteFormat;
 
@@ -13,6 +14,14 @@ void saveImage(Image image) async {
   final blobURL =
       Url.createObjectUrlFromBlob(await context.canvas.toBlob("png"));
   AnchorElement(href: blobURL)
+    ..setAttribute("download", "framed.png")
+    ..click();
+}
+
+void saveJSON(Map<String, dynamic> json) async {
+  AnchorElement(
+      href: Url.createObjectUrlFromBlob(
+          Blob([jsonEncode(json)], "application/json")))
     ..setAttribute("download", "framed.png")
     ..click();
 }

@@ -163,6 +163,21 @@ class FrameWidget extends StatelessWidget {
         final openPos =
             Offset(openButtonPoint.dx, openButtonPoint.dy + openButtonYOffset);
 
+        const labelWidth = 100;
+        const labelHeight = 25;
+        final columned = [...frame.points];
+        late final Offset labelPos;
+        columned.sort((a, b) => a.loc.dy.compareTo(b.loc.dy));
+        final topTwoDifference =
+            (columned[0].loc.dy - columned[1].loc.dy).abs();
+        if (topTwoDifference < 0.05) {
+          labelPos = ((columned[0].loc + columned[1].loc) / 2)
+              .scale(constraints.maxWidth, constraints.maxHeight);
+        } else {
+          labelPos = columned[0]
+              .loc
+              .scale(constraints.maxWidth, constraints.maxHeight);
+        }
         return OverflowBox(
             maxWidth: pointAreaWidth,
             maxHeight: pointAreaHeight,
@@ -174,6 +189,30 @@ class FrameWidget extends StatelessWidget {
                         alignment: FractionalOffset(point.loc.dx, point.loc.dy),
                         child: PointWidget(pointID: point.id)),
                   ],
+                if (state.showingLines)
+                  Positioned(
+                    left: labelPos.dx - labelWidth / 2,
+                    top: labelPos.dy - (labelHeight + 10),
+                    child: SizedBox(
+                      width: labelWidth.toDouble(),
+                      height: labelHeight.toDouble(),
+                      child: TextField(
+                          textAlign: TextAlign.center,
+                          controller: frame.nameField,
+                          decoration: const InputDecoration(
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey),
+                              ),
+                              labelStyle: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: labelHeight - 5),
+                              alignLabelWithHint: true,
+                              floatingLabelAlignment:
+                                  FloatingLabelAlignment.center,
+                              fillColor: Colors.black26,
+                              labelText: "Frame ID")),
+                    ),
+                  ),
                 if (!openPos.dx.isNaN &&
                     !openPos.dy.isNaN &&
                     state.showingLines)

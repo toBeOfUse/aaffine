@@ -30,6 +30,7 @@ class FrameModel {
   final List<PointModel> _points;
   static int frameCount = 0;
   DecodedImage? image;
+  TextEditingController nameField = TextEditingController();
 
   /// Creates a very boring default frame. Points are clockwise with the top
   /// left first; N.B. all future constructors should follow this convention!!
@@ -46,6 +47,19 @@ class FrameModel {
   factory FrameModel.overlapAvoidingSquare() {
     return FrameModel.square(
         pos: Offset(0.1 + 0.05 * frameCount, 0.1 + 0.05 * frameCount));
+  }
+
+  Map<String, dynamic>? toJSON() {
+    final matrix = makeImageFit(1, 1);
+    return {
+      if (matrix != null)
+        "matrix": [
+          for (var i = 0; i < 4; i++)
+            [for (var j = 0; j < 4; j++) matrix.getRow(i)[j]]
+        ],
+      "points": _points.map((p) => [p.loc.dx, p.loc.dy]).toList(),
+      "name": nameField.text
+    };
   }
 
   List<PointModel> get points {
@@ -232,6 +246,9 @@ class FrameModel {
 class FrameCollection extends ChangeNotifier {
   final List<FrameModel> frames;
   final Map<int, FrameModel> _pointIndex = {};
+  ImageWidget? backgroundImage;
+  TextEditingController nameField = TextEditingController();
+
   bool showingLines = true;
 
   /// Used to identify the [CustomPaint] widget whose local coordinate system we
@@ -242,6 +259,13 @@ class FrameCollection extends ChangeNotifier {
 
   FrameCollection() : frames = [] {
     addFrame(FrameModel.square());
+  }
+
+  Map<String, dynamic> toJSON() {
+    return {
+      "frames": frames.map((f) => f.toJSON()).toList(),
+      "name": nameField.text
+    };
   }
 
   void dragPoint(int pointID, Offset position) {
@@ -280,12 +304,23 @@ class FrameCollection extends ChangeNotifier {
     for (final point in del.points) {
       _pointIndex.remove(point.id);
     }
+    del.nameField.dispose();
     frames.remove(del);
     notifyListeners();
   }
 
   void toggleLines() {
     showingLines = !showingLines;
+    notifyListeners();
+  }
+
+  void setMainImage(ImageWidget image) async {
+    backgroundImage = image;
+    notifyListeners();
+  }
+
+  void clearMainImage() {
+    backgroundImage = null;
     notifyListeners();
   }
 
