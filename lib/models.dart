@@ -104,7 +104,7 @@ class FrameModel {
       if (matrix != null) "3x3matrix": matrix.toMatrix3().toLists(),
       if (objectSpaceCoords != null)
         "imagePlanePoints":
-            objectSpaceCoords!.map((e) => [e.dx, e.dy].toList()),
+            objectSpaceCoords!.map((e) => [e.dx, e.dy]).toList(),
       "worldPlanePoints": _points.map((p) => [p.loc.dx, p.loc.dy]).toList(),
       "name": nameField.text
     };
