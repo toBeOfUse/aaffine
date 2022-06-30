@@ -160,21 +160,21 @@ class FrameWidget extends StatelessWidget {
             constraints.maxHeight) {
           openButtonYOffset = -openButtonYOffset - openButtonSize * 1.5;
         }
-        final openPos =
-            Offset(openButtonPoint.dx, openButtonPoint.dy + openButtonYOffset);
+        final openPos = Offset(openButtonPoint.dx - openButtonSize * 1.5,
+            openButtonPoint.dy + openButtonYOffset);
 
-        const labelWidth = 100;
-        const labelHeight = 25;
+        const labelWidth = 150;
+        const labelHeight = 30;
         final columned = [...frame.points];
-        late final Offset labelPos;
+        late final Offset labelAnchor;
         columned.sort((a, b) => a.loc.dy.compareTo(b.loc.dy));
         final topTwoDifference =
             (columned[0].loc.dy - columned[1].loc.dy).abs();
         if (topTwoDifference < 0.05) {
-          labelPos = ((columned[0].loc + columned[1].loc) / 2)
+          labelAnchor = ((columned[0].loc + columned[1].loc) / 2)
               .scale(constraints.maxWidth, constraints.maxHeight);
         } else {
-          labelPos = columned[0]
+          labelAnchor = columned[0]
               .loc
               .scale(constraints.maxWidth, constraints.maxHeight);
         }
@@ -191,26 +191,30 @@ class FrameWidget extends StatelessWidget {
                   ],
                 if (state.showingLines)
                   Positioned(
-                    left: labelPos.dx - labelWidth / 2,
-                    top: labelPos.dy - (labelHeight + 10),
+                    left: labelAnchor.dx - labelWidth / 2 + 5,
+                    top: labelAnchor.dy - (labelHeight + 10),
                     child: SizedBox(
                       width: labelWidth.toDouble(),
                       height: labelHeight.toDouble(),
                       child: TextField(
-                          textAlign: TextAlign.center,
-                          controller: frame.nameField,
-                          decoration: const InputDecoration(
-                              border: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              labelStyle: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: labelHeight - 5),
-                              alignLabelWithHint: true,
-                              floatingLabelAlignment:
-                                  FloatingLabelAlignment.center,
-                              fillColor: Colors.black26,
-                              labelText: "Frame ID")),
+                        textAlign: TextAlign.center,
+                        textAlignVertical: TextAlignVertical.center,
+                        style: const TextStyle(fontSize: labelHeight - 15),
+                        controller: frame.nameField,
+                        clipBehavior: Clip.none,
+                        decoration: const InputDecoration(
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey),
+                            ),
+                            labelStyle: TextStyle(
+                                color: Colors.black,
+                                fontSize: labelHeight - 15),
+                            alignLabelWithHint: true,
+                            floatingLabelAlignment:
+                                FloatingLabelAlignment.center,
+                            fillColor: Colors.black26,
+                            labelText: "Frame ID"),
+                      ),
                     ),
                   ),
                 if (!openPos.dx.isNaN &&
@@ -227,15 +231,16 @@ class FrameWidget extends StatelessWidget {
                       ),
                       child: Row(children: [
                         GestureDetector(
-                            onPanUpdate: (details) {
-                              final state = Provider.of<FrameCollection>(
-                                  context,
-                                  listen: false);
-                              state.dragFrame(frame, details.delta);
-                            },
-                            child: FloatingFrameButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.open_with_outlined))),
+                          onPanUpdate: (details) {
+                            final state = Provider.of<FrameCollection>(context,
+                                listen: false);
+                            state.dragFrame(frame, details.delta);
+                          },
+                          child: FloatingFrameButton(
+                            onPressed: () {},
+                            icon: const Icon(Icons.open_with_outlined),
+                          ),
+                        ),
                         FloatingFrameButton(
                             onPressed: () async {
                               final image = await getImage();
