@@ -372,6 +372,10 @@ class FrameCollection extends ChangeNotifier {
 
   void clearMainImage() {
     backgroundImage = null;
+    _pointIndex.clear();
+    for (final frame in [...frames]) {
+      removeFrame(frame);
+    }
     notifyListeners();
   }
 
