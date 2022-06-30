@@ -177,12 +177,22 @@ class FrameModel {
       final transform =
           (((imageSpaceDefMatrix.transpose() * imageSpaceDefMatrix).inverse() *
                   imageSpaceDefMatrix.transpose()) *
-              worldColumnVector);
-      final transformData = [
-        ...[for (final col in transform.columns) ...col],
+                  worldColumnVector)
+              .getColumn(0);
+      final colMajorTransform = [
+        ...[
+          transform[0],
+          transform[3],
+          transform[6],
+          transform[1],
+          transform[4],
+          transform[7],
+          transform[2],
+          transform[5]
+        ],
         1.0
       ];
-      final mat4 = vec.Matrix3.fromList(transformData).toMatrix4();
+      final mat4 = vec.Matrix3.fromList(colMajorTransform).toMatrix4();
       if (kDebugMode) {
         for (var i = 0; i < 4; i++) {
           final point = objectSpaceCoords[i];
