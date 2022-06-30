@@ -165,9 +165,16 @@ class FrameWidget extends StatelessWidget {
 
         const labelWidth = 150;
         const labelHeight = 30;
-        final columned = [...frame.points];
+        var columned = [...frame.points];
         late final Offset labelAnchor;
+        late final double labelYOffset;
         columned.sort((a, b) => a.loc.dy.compareTo(b.loc.dy));
+        if (columned[0].loc.dy < (labelHeight + 10) / constraints.maxHeight) {
+          labelYOffset = 20;
+          columned = columned.reversed.toList();
+        } else {
+          labelYOffset = -labelHeight - 10;
+        }
         final topTwoDifference =
             (columned[0].loc.dy - columned[1].loc.dy).abs();
         if (topTwoDifference < 0.05) {
@@ -192,7 +199,7 @@ class FrameWidget extends StatelessWidget {
                 if (state.showingLines)
                   Positioned(
                     left: labelAnchor.dx - labelWidth / 2 + 5,
-                    top: labelAnchor.dy - (labelHeight + 10),
+                    top: labelAnchor.dy + labelYOffset,
                     child: SizedBox(
                       width: labelWidth.toDouble(),
                       height: labelHeight.toDouble(),

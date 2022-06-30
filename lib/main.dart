@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'save_files/web_save.dart'
     if (dart.library.io) "save_files/desktop_save.dart";
 
@@ -110,7 +108,7 @@ class ControlRow extends StatelessWidget {
               ),
               IconButton(
                 splashRadius: 25,
-                tooltip: "Show the flexible frames for editing",
+                tooltip: "Show/hide the flexible frames for editing",
                 icon: Icon(state.showingLines
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined),
@@ -170,9 +168,9 @@ class FramesPage extends StatelessWidget {
                         )
                       : IntrinsicWidth(
                           child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Flexible(
                                   child: Stack(
                                 children: [
@@ -183,7 +181,9 @@ class FramesPage extends StatelessWidget {
                                 ],
                               )),
                               const ControlRow(),
-                            ])),
+                            ],
+                          ),
+                        ),
                 ),
               ),
             ),

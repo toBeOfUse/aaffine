@@ -176,7 +176,7 @@ class FrameModel {
       ]);
       final transform =
           (((imageSpaceDefMatrix.transpose() * imageSpaceDefMatrix).inverse() *
-                  imageSpaceDefMatrix.transpose()) *
+                      imageSpaceDefMatrix.transpose()) *
                   worldColumnVector)
               .getColumn(0);
       final colMajorTransform = [
