@@ -12,6 +12,51 @@ import 'radiant_vector.dart';
 typedef DecodedImage = ui.Image;
 typedef ImageWidget = Image;
 
+extension LowerDimensions on Matrix4 {
+  vec.Matrix3 toMatrix3() {
+    return vec.Matrix3.fromList([
+      for (final colIndex in [0, 1, 3]) ...[
+        for (final rowIndex in [0, 1, 3]) getRow(rowIndex)[colIndex]
+      ]
+    ]);
+  }
+
+  List<List<double>> toLists() {
+    return [
+      for (var i = 0; i < 4; i++) [for (var j = 0; j < 4; j++) getRow(i)[j]]
+    ];
+  }
+}
+
+extension HigherDimensions on vec.Matrix3 {
+  Matrix4 toMatrix4() {
+    return Matrix4.fromList([
+      getColumn(0)[0],
+      getColumn(0)[1],
+      0,
+      getColumn(0)[2],
+      getColumn(1)[0],
+      getColumn(1)[1],
+      0,
+      getColumn(1)[2],
+      0,
+      0,
+      1,
+      0,
+      getColumn(2)[0],
+      getColumn(2)[1],
+      0,
+      getColumn(2)[2]
+    ]);
+  }
+
+  List<List<double>> toLists() {
+    return [
+      for (var i = 0; i < 3; i++) [for (var j = 0; j < 3; j++) getRow(i)[j]]
+    ];
+  }
+}
+
 /// Exits to be contained in [FrameModel].
 class PointModel {
   Offset loc;
@@ -29,14 +74,17 @@ class PointModel {
 class FrameModel {
   final List<PointModel> _points;
   static int frameCount = 0;
+  int id;
   DecodedImage? image;
-  TextEditingController nameField = TextEditingController();
+  TextEditingController nameField;
 
   /// Creates a very boring default frame. Points are clockwise with the top
   /// left first; N.B. all future constructors should follow this convention!!
   FrameModel.square(
       {Offset pos = const Offset(0.1, 0.1), double sideLength = 0.2})
-      : _points = [
+      : id = frameCount,
+        nameField = TextEditingController(text: "PerspectiveFrame$frameCount"),
+        _points = [
           pos,
           Offset(pos.dx + sideLength, pos.dy),
           Offset(pos.dx + sideLength, pos.dy + sideLength),
@@ -52,12 +100,12 @@ class FrameModel {
   Map<String, dynamic>? toJSON() {
     final matrix = makeImageFit(1, 1);
     return {
-      if (matrix != null)
-        "matrix": [
-          for (var i = 0; i < 4; i++)
-            [for (var j = 0; j < 4; j++) matrix.getRow(i)[j]]
-        ],
-      "points": _points.map((p) => [p.loc.dx, p.loc.dy]).toList(),
+      if (matrix != null) "4x4matrix": matrix.toLists(),
+      if (matrix != null) "3x3matrix": matrix.toMatrix3().toLists(),
+      if (objectSpaceCoords != null)
+        "imagePlanePoints":
+            objectSpaceCoords!.map((e) => [e.dx, e.dy].toList()),
+      "worldPlanePoints": _points.map((p) => [p.loc.dx, p.loc.dy]).toList(),
       "name": nameField.text
     };
   }
@@ -65,6 +113,16 @@ class FrameModel {
   List<PointModel> get points {
     return _points;
   }
+
+  /// top left first, like the output of [FrameModel.square]
+  List<Offset>? get objectSpaceCoords => image == null
+      ? null
+      : [
+          const Offset(0, 0),
+          Offset(image!.width.toDouble(), 0),
+          Offset(image!.width.toDouble(), image!.height.toDouble()),
+          Offset(0, image!.height.toDouble()),
+        ];
 
   /// Outputs a matrix that will take an image from "object space" (the
   /// pixel-based coordinate system where the top left of the image is at (0,0)
@@ -80,14 +138,8 @@ class FrameModel {
   Matrix4? makeImageFit(double screenSpaceWidth, double screenSpaceHeight) {
     final width = image?.width.toDouble();
     final height = image?.height.toDouble();
-    if (width != null && height != null && !width.isNaN && !height.isNaN) {
-      /// top left first, like the output of [FrameModel.square]
-      final objectSpaceCoords = [
-        const Offset(0, 0),
-        Offset(width, 0),
-        Offset(width, height),
-        Offset(0, height),
-      ];
+    final objectSpaceCoords = this.objectSpaceCoords;
+    if (width != null && height != null && objectSpaceCoords != null) {
       final worldSpaceCoords = [
         for (final p in points) Offset(p.loc.dx, p.loc.dy)
       ];
@@ -127,21 +179,10 @@ class FrameModel {
                   imageSpaceDefMatrix.transpose()) *
               worldColumnVector);
       final transformData = [
-        ...[for (final row in transform.rows) ...row],
+        ...[for (final col in transform.columns) ...col],
         1.0
       ];
-      final mat4 = Matrix4.identity();
-      for (var i = 0; i < 9; i++) {
-        var row = i ~/ 3;
-        var col = i % 3;
-        if (row == 2) {
-          row = 3;
-        }
-        if (col == 2) {
-          col = 3;
-        }
-        mat4.setEntry(row, col, transformData[i]);
-      }
+      final mat4 = vec.Matrix3.fromList(transformData).toMatrix4();
       if (kDebugMode) {
         for (var i = 0; i < 4; i++) {
           final point = objectSpaceCoords[i];
