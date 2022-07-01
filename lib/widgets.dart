@@ -35,7 +35,23 @@ Future<DecodedImage?> getImage() async {
 Future<ImageWidget?> getImageWidget() async {
   final bytes = await getImageBytes();
   if (bytes != null) {
-    return ImageWidget.memory(bytes, filterQuality: FilterQuality.medium);
+    return ImageWidget.memory(bytes, filterQuality: FilterQuality.medium,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+      if (wasSynchronouslyLoaded) return child;
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: frame != null
+            ? child
+            : Container(
+                padding: const EdgeInsets.all(40),
+                child: const SizedBox(
+                  height: 60,
+                  width: 60,
+                  child: CircularProgressIndicator(strokeWidth: 6),
+                ),
+              ),
+      );
+    });
   }
   return null;
 }
