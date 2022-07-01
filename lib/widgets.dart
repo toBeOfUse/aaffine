@@ -169,11 +169,11 @@ class FrameWidget extends StatelessWidget {
         late final Offset labelAnchor;
         late final double labelYOffset;
         columned.sort((a, b) => a.loc.dy.compareTo(b.loc.dy));
-        if (columned[0].loc.dy < (labelHeight + 10) / constraints.maxHeight) {
-          labelYOffset = 20;
+        if (columned[0].loc.dy < (labelHeight + 15) / constraints.maxHeight) {
+          labelYOffset = 30;
           columned = columned.reversed.toList();
         } else {
-          labelYOffset = -labelHeight - 10;
+          labelYOffset = -labelHeight - 20;
         }
         final topTwoDifference =
             (columned[0].loc.dy - columned[1].loc.dy).abs();
@@ -200,6 +200,13 @@ class FrameWidget extends StatelessWidget {
                 ],
               if (state.showingLines)
                 Positioned(
+                  left: labelAnchor.dx - labelWidth / 2 + 5,
+                  top: labelAnchor.dy + labelYOffset,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                        color: Colors.white60,
+                        borderRadius: BorderRadius.all(Radius.circular(5))),
+                    padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
                     child: SizedBox(
                       width: labelWidth.toDouble(),
                       height: labelHeight.toDouble(),
@@ -224,48 +231,48 @@ class FrameWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (!openPos.dx.isNaN &&
-                    !openPos.dy.isNaN &&
-                    state.showingLines)
-                  Positioned(
-                    left: openPos.dx,
-                    top: openPos.dy,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white24,
-                        shape: BoxShape.rectangle,
-                        borderRadius: BorderRadius.all(Radius.circular(2.0)),
-                      ),
-                      child: Row(children: [
-                        GestureDetector(
-                          onPanUpdate: (details) {
-                            final state = Provider.of<FrameCollection>(context,
-                                listen: false);
-                            state.dragFrame(frame, details.delta);
-                          },
-                          child: FloatingFrameButton(
-                            onPressed: () {},
-                            icon: const Icon(Icons.open_with_outlined),
-                          ),
-                        ),
-                        FloatingFrameButton(
-                            onPressed: () async {
-                              final image = await getImage();
-                              if (image != null) {
-                                state.addImage(frame, image);
-                              }
-                            },
-                            icon: const Icon(Icons.folder_outlined)),
-                        FloatingFrameButton(
-                            onPressed: () {
-                              state.removeFrame(frame);
-                            },
-                            icon: const Icon(Icons.delete_outlined))
-                      ]),
+                ),
+              if (!openPos.dx.isNaN && !openPos.dy.isNaN && state.showingLines)
+                Positioned(
+                  left: openPos.dx,
+                  top: openPos.dy,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white60,
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.all(Radius.circular(2.0)),
                     ),
+                    child: Row(children: [
+                      GestureDetector(
+                        onPanUpdate: (details) {
+                          final state = Provider.of<FrameCollection>(context,
+                              listen: false);
+                          state.dragFrame(frame, details.delta);
+                        },
+                        child: FloatingFrameButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.open_with_outlined),
+                        ),
+                      ),
+                      FloatingFrameButton(
+                          onPressed: () async {
+                            final image = await getImage();
+                            if (image != null) {
+                              state.addImage(frame, image);
+                            }
+                          },
+                          icon: const Icon(Icons.folder_outlined)),
+                      FloatingFrameButton(
+                          onPressed: () {
+                            state.removeFrame(frame);
+                          },
+                          icon: const Icon(Icons.delete_outlined))
+                    ]),
                   ),
-              ],
-            ));
+                ),
+            ],
+          ),
+        );
       },
     );
   }
