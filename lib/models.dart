@@ -304,8 +304,10 @@ class FrameCollection extends ChangeNotifier {
   TransformationController viewerController = TransformationController();
   double viewerScaleFactor = 1.0;
 
-  Widget undoViewerScale(Widget w) =>
-      Transform.scale(scale: 1 / viewerScaleFactor, child: w);
+  Widget undoViewerScale(Widget w,
+          {required AlignmentGeometry? shrinkTowards}) =>
+      Transform.scale(
+          scale: 1 / viewerScaleFactor, alignment: shrinkTowards, child: w);
 
   /// Used to identify the [CustomPaint] widget whose local coordinate system we
   /// need to use in both drawing and mouse positioning

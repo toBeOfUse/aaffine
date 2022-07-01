@@ -166,31 +166,60 @@ class FrameWidget extends StatelessWidget {
         // than this container so that the centers of the points can be at the
         // edges of the image meaning that the sides of the points are off the
         // edge of the image
-        const openButtonSize = 30.0;
         final pointAreaWidth = constraints.maxWidth + PointWidget.radius * 2;
         final pointAreaHeight = constraints.maxHeight + PointWidget.radius * 2;
-        final openButtonPoint = frame.points[2].loc
-            .scale(constraints.maxWidth, constraints.maxHeight);
-        var openButtonYOffset = PointWidget.radius * 2.5;
-        if (openButtonPoint.dy + openButtonYOffset + openButtonSize >
-            constraints.maxHeight) {
-          openButtonYOffset = -openButtonYOffset - openButtonSize * 1.5;
-        }
-        final openPos = Offset(openButtonPoint.dx - openButtonSize * 1.5,
-            openButtonPoint.dy + openButtonYOffset);
 
+        /// control buttons are anchored, arbitrarily, to the 3rd point in the
+        /// point array. as long as the frames were constructed to spec, this
+        /// will be the botom right point, at least before the user starts
+        /// rotating things.
+        const controlButtonSize = 30.0;
+        final controlRowAnchor = frame.points[2].loc
+            .scale(constraints.maxWidth, constraints.maxHeight);
+        // to compensate for the "margin" of the pointAreaHeight:
+        var controlRowYOffset = PointWidget.radius;
+        // to add a gap between the point and the control row:
+        // ("PointWidget.radius*1/5" could be replaced with whatever you like)
+        final controlRowGap =
+            PointWidget.radius * 1.5 / state.viewerScaleFactor;
+        // if we actually have to put the control row above the point:
+        if (controlRowAnchor.dy +
+                controlRowYOffset +
+                controlButtonSize / state.viewerScaleFactor >
+            constraints.maxHeight) {
+          controlRowYOffset -=
+              controlButtonSize / state.viewerScaleFactor + controlRowGap;
+        } else {
+          controlRowYOffset += controlRowGap;
+        }
+        // to compensate for the "margin" of pointAreaWidth:
+        var controlRowXOffset = PointWidget.radius;
+        // for centering; assumes 3 control buttons!
+        controlRowXOffset -= controlButtonSize * 1.5;
+        final controlRowPos = Offset(controlRowAnchor.dx + controlRowXOffset,
+            controlRowAnchor.dy + controlRowYOffset);
+
+        // label positioning logic: find the highest-up points in the frame. if
+        // there isn't room above them, find the two lowest-down points in the
+        // frame. either way, take the two most extreme points. if they have
+        // very similar y-values, position the label directly between them.
+        // otherwise, position the label directly above/below the most high
+        // up/low down point.
         const labelWidth = 150;
         const labelHeight = 30;
         var columned = [...frame.points];
         late final Offset labelAnchor;
-        late final double labelYOffset;
+        late double labelYOffset;
         columned.sort((a, b) => a.loc.dy.compareTo(b.loc.dy));
-        if (columned[0].loc.dy < (labelHeight + 15) / constraints.maxHeight) {
+        if (columned[0].loc.dy <
+            (labelHeight / state.viewerScaleFactor + 15) /
+                constraints.maxHeight) {
           labelYOffset = 30;
           columned = columned.reversed.toList();
         } else {
-          labelYOffset = -labelHeight - 20;
+          labelYOffset = -labelHeight - 15;
         }
+        labelYOffset /= state.viewerScaleFactor;
         final topTwoDifference =
             (columned[0].loc.dy - columned[1].loc.dy).abs();
         if (topTwoDifference < 0.05) {
@@ -201,6 +230,9 @@ class FrameWidget extends StatelessWidget {
               .loc
               .scale(constraints.maxWidth, constraints.maxHeight);
         }
+        final labelPos = Offset(
+            labelAnchor.dx - labelWidth / 2, labelAnchor.dy + labelYOffset);
+
         return OverflowBox(
           maxWidth: pointAreaWidth,
           maxHeight: pointAreaHeight,
@@ -210,81 +242,91 @@ class FrameWidget extends StatelessWidget {
                 for (final point in frame.points) ...[
                   Align(
                     alignment: FractionalOffset(point.loc.dx, point.loc.dy),
-                    child:
-                        state.undoViewerScale(PointWidget(pointID: point.id)),
+                    child: state.undoViewerScale(
+                        shrinkTowards: Alignment.center,
+                        PointWidget(pointID: point.id)),
                   )
                 ],
               if (state.showingLines)
                 Positioned(
-                  left: labelAnchor.dx - labelWidth / 2 + 5,
-                  top: labelAnchor.dy + labelYOffset,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                        color: Colors.white60,
-                        borderRadius: BorderRadius.all(Radius.circular(5))),
-                    padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
-                    child: SizedBox(
-                      width: labelWidth.toDouble(),
-                      height: labelHeight.toDouble(),
-                      child: TextField(
-                        textAlign: TextAlign.center,
-                        textAlignVertical: TextAlignVertical.center,
-                        style: const TextStyle(fontSize: labelHeight - 15),
-                        controller: frame.nameField,
-                        clipBehavior: Clip.none,
-                        decoration: const InputDecoration(
-                            border: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey),
-                            ),
-                            labelStyle: TextStyle(
-                                color: Colors.black,
-                                fontSize: labelHeight - 15),
-                            alignLabelWithHint: true,
-                            floatingLabelAlignment:
-                                FloatingLabelAlignment.center,
-                            fillColor: Colors.black26,
-                            labelText: "Frame ID"),
+                  left: labelPos.dx,
+                  top: labelPos.dy,
+                  child: state.undoViewerScale(
+                    shrinkTowards: Alignment.topCenter,
+                    Container(
+                      decoration: const BoxDecoration(
+                          color: Colors.white60,
+                          borderRadius: BorderRadius.all(Radius.circular(5))),
+                      padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
+                      child: SizedBox(
+                        width: labelWidth.toDouble(),
+                        height: labelHeight.toDouble(),
+                        child: TextField(
+                          textAlign: TextAlign.center,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: const TextStyle(fontSize: labelHeight - 15),
+                          controller: frame.nameField,
+                          clipBehavior: Clip.none,
+                          decoration: const InputDecoration(
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.grey),
+                              ),
+                              labelStyle: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: labelHeight - 15),
+                              alignLabelWithHint: true,
+                              floatingLabelAlignment:
+                                  FloatingLabelAlignment.center,
+                              fillColor: Colors.black26,
+                              labelText: "Frame ID"),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              if (!openPos.dx.isNaN && !openPos.dy.isNaN && state.showingLines)
+              if (!controlRowPos.dx.isNaN &&
+                  !controlRowPos.dy.isNaN &&
+                  state.showingLines)
                 Positioned(
-                  left: openPos.dx,
-                  top: openPos.dy,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white60,
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.all(Radius.circular(2.0)),
-                    ),
-                    child: Row(children: [
-                      GestureDetector(
-                        onPanUpdate: (details) {
-                          final state = Provider.of<FrameCollection>(context,
-                              listen: false);
-                          state.dragFrame(frame, details.delta);
-                        },
-                        child: FloatingFrameButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.open_with_outlined),
+                  left: controlRowPos.dx,
+                  top: controlRowPos.dy,
+                  child: state.undoViewerScale(
+                      shrinkTowards: Alignment.topCenter,
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white60,
+                          shape: BoxShape.rectangle,
+                          borderRadius: BorderRadius.all(Radius.circular(2.0)),
                         ),
-                      ),
-                      FloatingFrameButton(
-                          onPressed: () async {
-                            final image = await getImage();
-                            if (image != null) {
-                              state.addImage(frame, image);
-                            }
-                          },
-                          icon: const Icon(Icons.folder_outlined)),
-                      FloatingFrameButton(
-                          onPressed: () {
-                            state.removeFrame(frame);
-                          },
-                          icon: const Icon(Icons.delete_outlined))
-                    ]),
-                  ),
+                        child: Row(children: [
+                          GestureDetector(
+                            onPanUpdate: (details) {
+                              final state = Provider.of<FrameCollection>(
+                                  context,
+                                  listen: false);
+                              state.dragFrame(frame,
+                                  details.delta / state.viewerScaleFactor);
+                            },
+                            child: FloatingFrameButton(
+                              onPressed: () {},
+                              icon: const Icon(Icons.open_with_outlined),
+                            ),
+                          ),
+                          FloatingFrameButton(
+                              onPressed: () async {
+                                final image = await getImage();
+                                if (image != null) {
+                                  state.addImage(frame, image);
+                                }
+                              },
+                              icon: const Icon(Icons.folder_outlined)),
+                          FloatingFrameButton(
+                              onPressed: () {
+                                state.removeFrame(frame);
+                              },
+                              icon: const Icon(Icons.delete_outlined))
+                        ]),
+                      )),
                 ),
             ],
           ),
