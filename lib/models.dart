@@ -300,6 +300,7 @@ class FrameCollection extends ChangeNotifier {
   ImageWidget? backgroundImage;
   TextEditingController nameField = TextEditingController();
   bool showingLines = true;
+  bool mainImageLoaded = false;
   TransformationController viewerController = TransformationController();
   double viewerScaleFactor = 1.0;
 
@@ -375,6 +376,14 @@ class FrameCollection extends ChangeNotifier {
   }
 
   void setMainImage(ImageWidget image) {
+    image.image
+        .resolve(const ImageConfiguration())
+        .addListener(ImageStreamListener(
+      (image, synchronousCall) {
+        mainImageLoaded = true;
+        notifyListeners();
+      },
+    ));
     backgroundImage = image;
     notifyListeners();
   }
@@ -386,6 +395,7 @@ class FrameCollection extends ChangeNotifier {
       removeFrame(frame);
     }
     nameField.clear();
+    mainImageLoaded = false;
     notifyListeners();
   }
 

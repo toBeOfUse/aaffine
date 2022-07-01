@@ -181,9 +181,10 @@ class FramesPage extends StatelessWidget {
                                   child: Stack(
                                     children: [
                                       frames.backgroundImage as Widget,
-                                      const Positioned.fill(
-                                        child: FrameLayer(),
-                                      )
+                                      if (frames.mainImageLoaded)
+                                        const Positioned.fill(
+                                          child: FrameLayer(),
+                                        )
                                     ],
                                   ),
                                 ),
