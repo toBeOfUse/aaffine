@@ -374,7 +374,7 @@ class FrameCollection extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setMainImage(ImageWidget image) async {
+  void setMainImage(ImageWidget image) {
     backgroundImage = image;
     notifyListeners();
   }
@@ -385,6 +385,7 @@ class FrameCollection extends ChangeNotifier {
     for (final frame in [...frames]) {
       removeFrame(frame);
     }
+    nameField.clear();
     notifyListeners();
   }
 
