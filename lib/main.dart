@@ -172,14 +172,22 @@ class FramesPage extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Flexible(
+                                child: InteractiveViewer(
+                                  transformationController:
+                                      frames.viewerController,
+                                  onInteractionUpdate: (ScaleUpdateDetails d) =>
+                                      frames.updateScale(),
+                                  maxScale: 5,
                                   child: Stack(
-                                children: [
-                                  frames.backgroundImage as Widget,
-                                  const Positioned.fill(
-                                    child: FrameLayer(),
-                                  )
-                                ],
-                              )),
+                                    children: [
+                                      frames.backgroundImage as Widget,
+                                      const Positioned.fill(
+                                        child: FrameLayer(),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
                               const ControlRow(),
                             ],
                           ),

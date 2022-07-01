@@ -186,20 +186,20 @@ class FrameWidget extends StatelessWidget {
               .scale(constraints.maxWidth, constraints.maxHeight);
         }
         return OverflowBox(
-            maxWidth: pointAreaWidth,
-            maxHeight: pointAreaHeight,
-            child: Stack(
-              children: [
-                if (state.showingLines)
-                  for (final point in frame.points) ...[
-                    Align(
-                        alignment: FractionalOffset(point.loc.dx, point.loc.dy),
-                        child: PointWidget(pointID: point.id)),
-                  ],
-                if (state.showingLines)
-                  Positioned(
-                    left: labelAnchor.dx - labelWidth / 2 + 5,
-                    top: labelAnchor.dy + labelYOffset,
+          maxWidth: pointAreaWidth,
+          maxHeight: pointAreaHeight,
+          child: Stack(
+            children: [
+              if (state.showingLines)
+                for (final point in frame.points) ...[
+                  Align(
+                    alignment: FractionalOffset(point.loc.dx, point.loc.dy),
+                    child:
+                        state.undoViewerScale(PointWidget(pointID: point.id)),
+                  )
+                ],
+              if (state.showingLines)
+                Positioned(
                     child: SizedBox(
                       width: labelWidth.toDouble(),
                       height: labelHeight.toDouble(),

@@ -299,8 +299,12 @@ class FrameCollection extends ChangeNotifier {
   final Map<int, FrameModel> _pointIndex = {};
   ImageWidget? backgroundImage;
   TextEditingController nameField = TextEditingController();
-
   bool showingLines = true;
+  TransformationController viewerController = TransformationController();
+  double viewerScaleFactor = 1.0;
+
+  Widget undoViewerScale(Widget w) =>
+      Transform.scale(scale: 1 / viewerScaleFactor, child: w);
 
   /// Used to identify the [CustomPaint] widget whose local coordinate system we
   /// need to use in both drawing and mouse positioning
@@ -317,6 +321,11 @@ class FrameCollection extends ChangeNotifier {
       "frames": frames.map((f) => f.toJSON()).toList(),
       "name": nameField.text
     };
+  }
+
+  void updateScale() {
+    viewerScaleFactor = viewerController.value.getMaxScaleOnAxis();
+    notifyListeners();
   }
 
   void dragPoint(int pointID, Offset position) {
