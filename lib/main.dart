@@ -39,9 +39,10 @@ void saveResult(List<FrameModel> frames, ImageProvider provider) {
     final image = imageInfo.image;
     final recorder = PictureRecorder();
     Canvas c = Canvas(recorder);
+    // bizarrely, FilterQuality.high sometimes has much worse image quality
     c.drawImage(
-        image, Offset.zero, Paint()..filterQuality = FilterQuality.high);
-    FramePainter(frames, false, FilterQuality.high)
+        image, Offset.zero, Paint()..filterQuality = FilterQuality.medium);
+    FramePainter(frames, false)
         .paint(c, Size(image.width.toDouble(), image.height.toDouble()));
     final result =
         await recorder.endRecording().toImage(image.width, image.height);
