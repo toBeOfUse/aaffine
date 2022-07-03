@@ -360,6 +360,7 @@ class FrameCollection extends ChangeNotifier {
       _pointIndex[point.id] = newFrame;
     }
     frames.add(newFrame);
+    showingLines = true;
     notifyListeners();
   }
 
