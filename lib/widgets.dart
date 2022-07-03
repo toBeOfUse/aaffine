@@ -169,35 +169,16 @@ class FrameWidget extends StatelessWidget {
         final pointAreaWidth = constraints.maxWidth + PointWidget.radius * 2;
         final pointAreaHeight = constraints.maxHeight + PointWidget.radius * 2;
 
-        /// control buttons are anchored, arbitrarily, to the 3rd point in the
-        /// point array. as long as the frames were constructed to spec, this
-        /// will be the botom right point, at least before the user starts
-        /// rotating things.
-        const controlButtonSize = 30.0;
-        final controlRowAnchor = frame.points[2].loc
-            .scale(constraints.maxWidth, constraints.maxHeight);
-        // to compensate for the "margin" of the pointAreaHeight:
-        var controlRowYOffset = PointWidget.radius;
-        // to add a gap between the point and the control row:
-        // ("PointWidget.radius*1/5" could be replaced with whatever you like)
-        final controlRowGap =
-            PointWidget.radius * 1.5 / state.viewerScaleFactor;
-        // if we actually have to put the control row above the point:
-        if (controlRowAnchor.dy +
-                controlRowYOffset +
-                controlButtonSize / state.viewerScaleFactor >
-            constraints.maxHeight) {
-          controlRowYOffset -=
-              controlButtonSize / state.viewerScaleFactor + controlRowGap;
-        } else {
-          controlRowYOffset += controlRowGap;
-        }
-        // to compensate for the "margin" of pointAreaWidth:
-        var controlRowXOffset = PointWidget.radius;
-        // for centering; assumes 3 control buttons!
-        controlRowXOffset -= controlButtonSize * 1.5;
-        final controlRowPos = Offset(controlRowAnchor.dx + controlRowXOffset,
-            controlRowAnchor.dy + controlRowYOffset);
+        // the control button row is centered around the center point of the
+        // frame.
+        final controlRowAnchor = frame.points
+                .map((p) =>
+                    p.loc.scale(constraints.maxWidth, constraints.maxHeight))
+                .reduce((acc, el) => acc + el) /
+            4;
+        final controlRowCenterPos = Offset(
+            controlRowAnchor.dx + PointWidget.radius,
+            controlRowAnchor.dy + PointWidget.radius);
 
         // label positioning logic: find the highest-up points in the frame. if
         // there isn't room above them, find the two lowest-down points in the
@@ -284,49 +265,52 @@ class FrameWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (!controlRowPos.dx.isNaN &&
-                  !controlRowPos.dy.isNaN &&
+              if (!controlRowCenterPos.dx.isNaN &&
+                  !controlRowCenterPos.dy.isNaN &&
                   state.showingLines)
                 Positioned(
-                  left: controlRowPos.dx,
-                  top: controlRowPos.dy,
-                  child: state.undoViewerScale(
-                      shrinkTowards: Alignment.topCenter,
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white60,
-                          shape: BoxShape.rectangle,
-                          borderRadius: BorderRadius.all(Radius.circular(2.0)),
-                        ),
-                        child: Row(children: [
-                          GestureDetector(
-                            onPanUpdate: (details) {
-                              final state = Provider.of<FrameCollection>(
-                                  context,
-                                  listen: false);
-                              state.dragFrame(frame,
-                                  details.delta / state.viewerScaleFactor);
-                            },
-                            child: FloatingFrameButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.open_with_outlined),
+                  left: controlRowCenterPos.dx,
+                  top: controlRowCenterPos.dy,
+                  child: FractionalTranslation(
+                      translation: const Offset(-0.5, -0.5),
+                      child: state.undoViewerScale(
+                          shrinkTowards: Alignment.center,
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.white60,
+                              shape: BoxShape.rectangle,
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(2.0)),
                             ),
-                          ),
-                          FloatingFrameButton(
-                              onPressed: () async {
-                                final image = await getImage();
-                                if (image != null) {
-                                  state.addImage(frame, image);
-                                }
-                              },
-                              icon: const Icon(Icons.folder_outlined)),
-                          FloatingFrameButton(
-                              onPressed: () {
-                                state.removeFrame(frame);
-                              },
-                              icon: const Icon(Icons.delete_outlined))
-                        ]),
-                      )),
+                            child: Row(children: [
+                              GestureDetector(
+                                onPanUpdate: (details) {
+                                  final state = Provider.of<FrameCollection>(
+                                      context,
+                                      listen: false);
+                                  state.dragFrame(frame,
+                                      details.delta / state.viewerScaleFactor);
+                                },
+                                child: FloatingFrameButton(
+                                  onPressed: () {},
+                                  icon: const Icon(Icons.open_with_outlined),
+                                ),
+                              ),
+                              FloatingFrameButton(
+                                  onPressed: () async {
+                                    final image = await getImage();
+                                    if (image != null) {
+                                      state.addImage(frame, image);
+                                    }
+                                  },
+                                  icon: const Icon(Icons.folder_outlined)),
+                              FloatingFrameButton(
+                                  onPressed: () {
+                                    state.removeFrame(frame);
+                                  },
+                                  icon: const Icon(Icons.delete_outlined))
+                            ]),
+                          ))),
                 ),
             ],
           ),
