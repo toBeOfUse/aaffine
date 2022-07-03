@@ -10,15 +10,6 @@ class RadiantVector implements Comparable {
   late final bool infiniteLength;
 
   RadiantVector(this.from, this.towards, this.infiniteLength);
-  RadiantVector.pointSlope(this.from, double slope, [double length = 1]) {
-    towards = from + Offset(1 / slope, slope);
-    if (length == double.infinity) {
-      infiniteLength = true;
-    } else {
-      infiniteLength = false;
-      towards = (positionVector / this.length + towards) * length;
-    }
-  }
 
   @override
   String toString() {
@@ -118,16 +109,21 @@ class RadiantVector implements Comparable {
 
   Offset closestPointOn(Offset point) {
     // Theory: to find the closest point on a RadiantVector to an incoming
-    // point, project along the (different) line that passes through the
-    // incoming point and is perpendicular to this RadiantVector.
-    final rotatedPV = Offset(positionVector.dy, -positionVector.dx);
-    // The perpendicular line is here represented by a RadiantVector. Because
+    // point, project along the ray that passes through the incoming point and
+    // is perpendicular towards and aimed at this RadiantVector.
+    // in order to direction of such a ray, rotate this' position vector either
+    // clockwise or counterclockwise depending on what size of this point is on.
+    // n.b. rotation formulae are different from +y-up coordinate systems
+    final sideOfThis = onSideOf(point);
+    final rotatedPV = sideOfThis == LineSide.left
+        ? Offset(-positionVector.dy, positionVector.dx)
+        : Offset(positionVector.dy, -positionVector.dx);
+    // The perpendicular ray is here represented by a RadiantVector. Because
     // we only need to go in one direction
-    final projVector = RadiantVector.pointSlope(
-        point, rotatedPV.dy / rotatedPV.dx, double.infinity);
+    final projVector = RadiantVector(point, point + rotatedPV, true);
     final projected = intersectWith(projVector);
     if (projected == null) {
-      // If there is no intersection between the perpendicular line through
+      // If there is no intersection between the perpendicular ray through
       // the point and this one, one of the endpoints is closest
       if ((point - from).distanceSquared < (point - towards).distanceSquared) {
         return from;
