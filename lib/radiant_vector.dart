@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 
 enum LineSide { left, right, onTopOf }
 
+extension NormalizeOffset on Offset {
+  Offset normalized() {
+    return Offset(dx / distance, dy / distance);
+  }
+}
+
 /// A radiant vector is like a line segment but it might have infinite length in
 /// exactly one direction. It's an optionally infinite ray. I have decided this
 class RadiantVector implements Comparable {

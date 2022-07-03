@@ -202,8 +202,8 @@ class FrameModel {
             testResult[0] / testResult[3],
             testResult[1] / testResult[3]
           ];
-          if ((wSpaceTest[0] - divW[0]).abs() > 0.001 ||
-              (wSpaceTest[1] - divW[1]).abs() > 0.001) {
+          if ((wSpaceTest[0] - divW[0]).abs() > 0.01 ||
+              (wSpaceTest[1] - divW[1]).abs() > 0.01) {
             log("alert: things wrong");
             log("object space coords: ${[point.dx, point.dy]}");
             log("actual world space coords: $wSpaceTest");
@@ -240,16 +240,16 @@ class FrameModel {
     if (oppositeForward.onSideOf(aimTowards) == LineSide.left ||
         oppositeBackward.onSideOf(aimTowards) == LineSide.right ||
         crossMember.onSideOf(aimTowards) == LineSide.left) {
-      if (kDebugMode) {
-        log("mouse entering illegal zone D:<");
-        log("mouse at: $aimTowards");
-        log("opposite forward: $oppositeForward");
-        log("side thereof: ${oppositeForward.onSideOf(aimTowards)}");
-        log("opposite backward: $oppositeBackward");
-        log("side thereof: ${oppositeBackward.onSideOf(aimTowards)}");
-        log("cross member: $crossMember");
-        log("side thereof: ${crossMember.onSideOf(aimTowards)}");
-      }
+      // if (kDebugMode) {
+      // log("mouse entering illegal zone D:<");
+      // log("mouse at: $aimTowards");
+      // log("opposite forward: $oppositeForward");
+      // log("side thereof: ${oppositeForward.onSideOf(aimTowards)}");
+      // log("opposite backward: $oppositeBackward");
+      // log("side thereof: ${oppositeBackward.onSideOf(aimTowards)}");
+      // log("cross member: $crossMember");
+      // log("side thereof: ${crossMember.onSideOf(aimTowards)}");
+      // }
 
       // good lord
       final closestPoints = [
@@ -258,7 +258,13 @@ class FrameModel {
       ]..sort((p1, p2) => (p1 - aimTowards)
           .distanceSquared
           .compareTo((p2 - aimTowards).distanceSquared));
-      points[pointIndex].loc = closestPoints[0];
+      final pointOnLine = closestPoints[0];
+      final correction = pointOnLine - aimTowards;
+      // for stability, when "correcting" a point to keep it within bounds,
+      // correct it a little extra to make the shape Definitely not concave.
+      final pointOffLine =
+          aimTowards + correction + correction.normalized() * 0.001;
+      points[pointIndex].loc = pointOffLine;
     } else {
       points[pointIndex].loc = aimTowards;
     }
