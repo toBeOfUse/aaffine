@@ -152,16 +152,25 @@ class FloatingFrameButton extends StatelessWidget {
   }
 }
 
+class FrameWidget extends StatefulWidget {
+  final FrameModel frame;
+
+  const FrameWidget(this.frame, {Key? key}) : super(key: key);
+  @override
+  FrameState createState() => FrameState();
+}
+
 /// Builds the draggable points, open image button, and other interactible
 /// components for [this.frame].
-class FrameWidget extends StatelessWidget {
-  final FrameModel frame;
-  const FrameWidget(this.frame, {Key? key}) : super(key: key);
+class FrameState extends State<FrameWidget> {
+  bool hoveredOver = false;
+
   @override
   Widget build(BuildContext context) {
     final state = Provider.of<FrameCollection>(context);
     return LayoutBuilder(
       builder: (context, constraints) {
+        final frame = widget.frame;
         // the box in which the PointWidgets can be rendered has to be bigger
         // than this container so that the centers of the points can be at the
         // edges of the image meaning that the sides of the points are off the
@@ -169,13 +178,12 @@ class FrameWidget extends StatelessWidget {
         final pointAreaWidth = constraints.maxWidth + PointWidget.radius * 2;
         final pointAreaHeight = constraints.maxHeight + PointWidget.radius * 2;
 
+        final scaledPoints = frame.points.map(
+            (p) => p.loc.scale(constraints.maxWidth, constraints.maxHeight));
+
         // the control button row is centered around the center point of the
         // frame.
-        final controlRowAnchor = frame.points
-                .map((p) =>
-                    p.loc.scale(constraints.maxWidth, constraints.maxHeight))
-                .reduce((acc, el) => acc + el) /
-            4;
+        final controlRowAnchor = scaledPoints.reduce((acc, el) => acc + el) / 4;
         final controlRowCenterPos = Offset(
             controlRowAnchor.dx + PointWidget.radius,
             controlRowAnchor.dy + PointWidget.radius);
@@ -188,11 +196,11 @@ class FrameWidget extends StatelessWidget {
         // up/low down point.
         const labelWidth = 150;
         const labelHeight = 30;
-        var columned = [...frame.points];
+        var columned = [...scaledPoints];
         late final Offset labelAnchor;
         late double labelYOffset;
-        columned.sort((a, b) => a.loc.dy.compareTo(b.loc.dy));
-        if (columned[0].loc.dy <
+        columned.sort((a, b) => a.dy.compareTo(b.dy));
+        if (columned[0].dy <
             (labelHeight / state.viewerScaleFactor + 15) /
                 constraints.maxHeight) {
           labelYOffset = 30;
@@ -201,15 +209,11 @@ class FrameWidget extends StatelessWidget {
           labelYOffset = -labelHeight - 15;
         }
         labelYOffset /= state.viewerScaleFactor;
-        final topTwoDifference =
-            (columned[0].loc.dy - columned[1].loc.dy).abs();
+        final topTwoDifference = (columned[0].dy - columned[1].dy).abs();
         if (topTwoDifference < 0.05) {
-          labelAnchor = ((columned[0].loc + columned[1].loc) / 2)
-              .scale(constraints.maxWidth, constraints.maxHeight);
+          labelAnchor = ((columned[0] + columned[1]) / 2);
         } else {
-          labelAnchor = columned[0]
-              .loc
-              .scale(constraints.maxWidth, constraints.maxHeight);
+          labelAnchor = columned[0];
         }
         final labelPos = Offset(
             labelAnchor.dx - labelWidth / 2, labelAnchor.dy + labelYOffset);
@@ -219,104 +223,144 @@ class FrameWidget extends StatelessWidget {
           maxHeight: pointAreaHeight,
           child: Stack(
             children: [
-              if (state.showingLines)
-                for (final point in frame.points) ...[
-                  Align(
-                    alignment: FractionalOffset(point.loc.dx, point.loc.dy),
-                    child: state.undoViewerScale(
-                        shrinkTowards: Alignment.center,
-                        PointWidget(pointID: point.id)),
-                  )
-                ],
-              if (state.showingLines)
-                Positioned(
-                  left: labelPos.dx,
-                  top: labelPos.dy,
-                  child: state.undoViewerScale(
-                    shrinkTowards: Alignment.topCenter,
-                    Container(
-                      decoration: const BoxDecoration(
-                          color: Colors.white60,
-                          borderRadius: BorderRadius.all(Radius.circular(5))),
-                      padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
-                      child: SizedBox(
-                        width: labelWidth.toDouble(),
-                        height: labelHeight.toDouble(),
-                        child: TextField(
-                          textAlign: TextAlign.center,
-                          textAlignVertical: TextAlignVertical.center,
-                          style: const TextStyle(fontSize: labelHeight - 15),
-                          controller: frame.nameField,
-                          clipBehavior: Clip.none,
-                          decoration: const InputDecoration(
-                              border: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.grey),
+              MouseRegion(
+                onHover: (event) {
+                  setState(() {
+                    hoveredOver = frame.pointInFrame((event.localPosition -
+                            const Offset(
+                                PointWidget.radius, PointWidget.radius))
+                        .scale(1 / constraints.maxWidth,
+                            1 / constraints.maxHeight));
+                  });
+                },
+              ),
+              MouseRegion(
+                onEnter: (event) => setState(() {
+                  hoveredOver = true;
+                }),
+                onExit: (event) => setState(() {
+                  hoveredOver = false;
+                }),
+                hitTestBehavior: HitTestBehavior.deferToChild,
+                child: Stack(children: [
+                  if (!controlRowCenterPos.dx.isNaN &&
+                      !controlRowCenterPos.dy.isNaN &&
+                      state.showingLines)
+                    Positioned(
+                      left: controlRowCenterPos.dx,
+                      top: controlRowCenterPos.dy,
+                      child: FractionalTranslation(
+                          translation: const Offset(-0.5, -0.5),
+                          child: state.undoViewerScale(
+                            shrinkTowards: Alignment.center,
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: hoveredOver ? 1 : 0,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white60,
+                                  shape: BoxShape.rectangle,
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(2.0)),
+                                ),
+                                child: FrameControls(frame: frame),
                               ),
-                              labelStyle: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: labelHeight - 15),
-                              alignLabelWithHint: true,
-                              floatingLabelAlignment:
-                                  FloatingLabelAlignment.center,
-                              fillColor: Colors.black26,
-                              labelText: "Frame ID"),
+                            ),
+                          )),
+                    ),
+                  if (state.showingLines)
+                    for (final point in frame.points) ...[
+                      Align(
+                        alignment: FractionalOffset(point.loc.dx, point.loc.dy),
+                        child: state.undoViewerScale(
+                            shrinkTowards: Alignment.center,
+                            PointWidget(pointID: point.id)),
+                      )
+                    ],
+                  if (state.showingLines)
+                    Positioned(
+                      left: labelPos.dx,
+                      top: labelPos.dy,
+                      child: state.undoViewerScale(
+                        shrinkTowards: Alignment.topCenter,
+                        Container(
+                          decoration: const BoxDecoration(
+                              color: Colors.white60,
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(5))),
+                          padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
+                          child: SizedBox(
+                            width: labelWidth.toDouble(),
+                            height: labelHeight.toDouble(),
+                            child: TextField(
+                              textAlign: TextAlign.center,
+                              textAlignVertical: TextAlignVertical.center,
+                              style:
+                                  const TextStyle(fontSize: labelHeight - 15),
+                              controller: frame.nameField,
+                              clipBehavior: Clip.none,
+                              decoration: const InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey),
+                                  ),
+                                  labelStyle: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: labelHeight - 15),
+                                  alignLabelWithHint: true,
+                                  floatingLabelAlignment:
+                                      FloatingLabelAlignment.center,
+                                  fillColor: Colors.black26,
+                                  labelText: "Frame ID"),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              if (!controlRowCenterPos.dx.isNaN &&
-                  !controlRowCenterPos.dy.isNaN &&
-                  state.showingLines)
-                Positioned(
-                  left: controlRowCenterPos.dx,
-                  top: controlRowCenterPos.dy,
-                  child: FractionalTranslation(
-                      translation: const Offset(-0.5, -0.5),
-                      child: state.undoViewerScale(
-                          shrinkTowards: Alignment.center,
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.white60,
-                              shape: BoxShape.rectangle,
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(2.0)),
-                            ),
-                            child: Row(children: [
-                              GestureDetector(
-                                onPanUpdate: (details) {
-                                  final state = Provider.of<FrameCollection>(
-                                      context,
-                                      listen: false);
-                                  state.dragFrame(frame,
-                                      details.delta / state.viewerScaleFactor);
-                                },
-                                child: FloatingFrameButton(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.open_with_outlined),
-                                ),
-                              ),
-                              FloatingFrameButton(
-                                  onPressed: () async {
-                                    final image = await getImage();
-                                    if (image != null) {
-                                      state.addImage(frame, image);
-                                    }
-                                  },
-                                  icon: const Icon(Icons.folder_outlined)),
-                              FloatingFrameButton(
-                                  onPressed: () {
-                                    state.removeFrame(frame);
-                                  },
-                                  icon: const Icon(Icons.delete_outlined))
-                            ]),
-                          ))),
-                ),
+                ]),
+              )
             ],
           ),
         );
       },
     );
+  }
+}
+
+class FrameControls extends StatelessWidget {
+  const FrameControls({
+    Key? key,
+    required this.frame,
+  }) : super(key: key);
+
+  final FrameModel frame;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = Provider.of<FrameCollection>(context, listen: false);
+    return Row(children: [
+      GestureDetector(
+        onPanUpdate: (details) {
+          state.dragFrame(frame, details.delta / state.viewerScaleFactor);
+        },
+        child: FloatingFrameButton(
+          onPressed: () {},
+          icon: const Icon(Icons.open_with_outlined),
+        ),
+      ),
+      FloatingFrameButton(
+          onPressed: () async {
+            final image = await getImage();
+            if (image != null) {
+              state.addImage(frame, image);
+            }
+          },
+          icon: const Icon(Icons.folder_outlined)),
+      FloatingFrameButton(
+          onPressed: () {
+            state.removeFrame(frame);
+          },
+          icon: const Icon(Icons.delete_outlined))
+    ]);
   }
 }
 

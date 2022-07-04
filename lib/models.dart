@@ -57,6 +57,18 @@ extension HigherDimensions on vec.Matrix3 {
   }
 }
 
+extension ToOffset on vec.Vector2 {
+  Offset toOffset() {
+    return Offset(x, y);
+  }
+}
+
+extension ToVec2 on Offset {
+  vec.Vector2 toVec2() {
+    return vec.Vector2(dx, dy);
+  }
+}
+
 /// Exits to be contained in [FrameModel].
 class PointModel {
   Offset loc;
@@ -273,7 +285,7 @@ class FrameModel {
     points[pointIndex].loc = Offset(bounds(result.dx), bounds(result.dy));
   }
 
-  void move(Offset delta) {
+  vec.Aabb2 getAABB() {
     final topLeft = points.fold<Offset>(
         Offset.infinite,
         (Offset o, PointModel p) =>
@@ -282,6 +294,43 @@ class FrameModel {
         Offset.zero,
         (Offset o, PointModel p) =>
             Offset(math.max(o.dx, p.loc.dx), math.max(o.dy, p.loc.dy)));
+    return vec.Aabb2.minMax(vec.Vector2(topLeft.dx, topLeft.dy),
+        vec.Vector2(bottomRight.dx, bottomRight.dy));
+  }
+
+  bool pointInFrame(Offset point) {
+    // initial fast aabb test:
+    final aabb = getAABB();
+    if (!aabb.containsVector2(point.toVec2())) {
+      return false;
+    }
+    // split the quad into two triangles. for each triangle, go around and make
+    // sure the point is on the right side of each line segment to see if the
+    // point is in the triangle. it has to be inside at least one of the
+    // triangles.
+    // parallel arrays 😌
+    final triangles = [
+      [points[0].loc, points[1].loc, points[2].loc],
+      [points[2].loc, points[3].loc, points[0].loc]
+    ];
+    final inTris = [true, true];
+    for (var j = 0; j < 2; j++) {
+      final tri = triangles[j];
+      for (var i = 0; i < 3; i++) {
+        final rad = RadiantVector(tri[i], tri[(i + 1) % 3], false);
+        if (rad.onSideOf(point) == LineSide.left) {
+          inTris[j] = false;
+          continue;
+        }
+      }
+    }
+    return inTris[0] || inTris[1];
+  }
+
+  void move(Offset delta) {
+    final aabb = getAABB();
+    final topLeft = aabb.min.toOffset();
+    final bottomRight = aabb.max.toOffset();
     if (topLeft.dx + delta.dx < 0) {
       delta = Offset(-topLeft.dx, delta.dy);
     }
