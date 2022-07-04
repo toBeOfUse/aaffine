@@ -163,7 +163,10 @@ class FrameWidget extends StatefulWidget {
 /// Builds the draggable points, open image button, and other interactible
 /// components for [this.frame].
 class FrameState extends State<FrameWidget> {
-  bool hoveredOver = false;
+  bool childHovered = false;
+  bool quadHovered = false;
+
+  bool get showControls => childHovered || quadHovered;
 
   @override
   Widget build(BuildContext context) {
@@ -224,9 +227,10 @@ class FrameState extends State<FrameWidget> {
           child: Stack(
             children: [
               MouseRegion(
+                opaque: false,
                 onHover: (event) {
                   setState(() {
-                    hoveredOver = frame.pointInFrame((event.localPosition -
+                    quadHovered = frame.pointInFrame((event.localPosition -
                             const Offset(
                                 PointWidget.radius, PointWidget.radius))
                         .scale(1 / constraints.maxWidth,
@@ -235,11 +239,12 @@ class FrameState extends State<FrameWidget> {
                 },
               ),
               MouseRegion(
+                opaque: false,
                 onEnter: (event) => setState(() {
-                  hoveredOver = true;
+                  childHovered = true;
                 }),
                 onExit: (event) => setState(() {
-                  hoveredOver = false;
+                  childHovered = false;
                 }),
                 hitTestBehavior: HitTestBehavior.deferToChild,
                 child: Stack(children: [
@@ -255,7 +260,7 @@ class FrameState extends State<FrameWidget> {
                             shrinkTowards: Alignment.center,
                             AnimatedOpacity(
                               duration: const Duration(milliseconds: 200),
-                              opacity: hoveredOver ? 1 : 0,
+                              opacity: showControls ? 1 : 0,
                               child: Container(
                                 decoration: const BoxDecoration(
                                   color: Colors.white60,
