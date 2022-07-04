@@ -93,11 +93,11 @@ class PointWidget extends StatelessWidget {
 
 /// Draws the lines and images for all the frames in [this.frames].
 class FramePainter extends CustomPainter {
-  final style = Paint()..color = Colors.black;
   final List<FrameModel> frames;
   final bool drawLines;
   final FilterQuality quality;
-  FramePainter(this.frames, this.drawLines,
+  final double lineWidth;
+  FramePainter(this.frames, this.drawLines, this.lineWidth,
       [this.quality = FilterQuality.medium]);
 
   Float64List getF64L(Matrix4 m) {
@@ -111,10 +111,16 @@ class FramePainter extends CustomPainter {
       canvas.save();
       if (drawLines) {
         for (int i = 0; i < 4; i++) {
-          canvas.drawLine(
-              frame.points[i].loc.scale(size.width, size.height),
-              frame.points[(i + 1) % 4].loc.scale(size.width, size.height),
-              style);
+          for (var layer = 0; layer < 2; layer++) {
+            canvas.drawLine(
+                frame.points[i].loc.scale(size.width, size.height),
+                frame.points[(i + 1) % 4].loc.scale(size.width, size.height),
+                Paint()
+                  ..color = layer == 0 ? Colors.black : Colors.white
+                  ..strokeWidth = lineWidth / (layer == 0 ? 1 : 3)
+                  ..strokeCap = StrokeCap.round
+                  ..filterQuality = quality);
+          }
         }
       }
 
@@ -380,7 +386,8 @@ class FrameLayer extends StatelessWidget {
     final state = Provider.of<FrameCollection>(context);
     return CustomPaint(
       key: state.paintKey,
-      painter: FramePainter(state.frames, state.showingLines),
+      painter: FramePainter(
+          state.frames, state.showingLines, 3 / state.viewerScaleFactor),
       child: Stack(children: [
         if (state.showingLines)
           for (final frame in state.frames) FrameWidget(frame)
