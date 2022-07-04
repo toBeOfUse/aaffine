@@ -210,7 +210,7 @@ class FrameState extends State<FrameWidget> {
         }
         labelYOffset /= state.viewerScaleFactor;
         final topTwoDifference = (columned[0].dy - columned[1].dy).abs();
-        if (topTwoDifference < 0.05) {
+        if (topTwoDifference < 5) {
           labelAnchor = ((columned[0] + columned[1]) / 2);
         } else {
           labelAnchor = columned[0];
