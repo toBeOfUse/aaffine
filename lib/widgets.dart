@@ -1,60 +1,9 @@
-import 'dart:developer';
-import 'dart:ui';
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'models.dart';
-
-Future<Uint8List?> getImageBytes() async {
-  FilePickerResult? result =
-      await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-  if (result != null && result.files.isNotEmpty) {
-    Uint8List? bytes = result.files.first.bytes;
-    return bytes;
-  }
-  return null;
-}
-
-Future<DecodedImage?> getImage() async {
-  final bytes = await getImageBytes();
-  if (bytes != null) {
-    try {
-      final Codec codec = await instantiateImageCodec(bytes);
-      return (await codec.getNextFrame()).image;
-    } catch (e) {
-      log("could not load image", level: 500);
-      log(e.toString());
-    }
-  }
-  return null;
-}
-
-Future<ImageWidget?> getImageWidget() async {
-  final bytes = await getImageBytes();
-  if (bytes != null) {
-    return ImageWidget.memory(bytes, filterQuality: FilterQuality.medium,
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-      if (wasSynchronouslyLoaded) return child;
-      return AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: frame != null
-            ? child
-            : Container(
-                padding: const EdgeInsets.all(40),
-                child: const SizedBox(
-                  height: 60,
-                  width: 60,
-                  child: CircularProgressIndicator(strokeWidth: 6),
-                ),
-              ),
-      );
-    });
-  }
-  return null;
-}
 
 /// Draws a little circle to represent a [PointModel]; detects pointer events
 /// that want to move it and gets [FrameCollection] to update the state based on

@@ -1,9 +1,11 @@
 import 'dart:developer';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:ml_linalg/linalg.dart';
 import 'package:vector_math/vector_math_64.dart' as vec;
 import 'radiant_vector.dart';
@@ -11,6 +13,72 @@ import 'radiant_vector.dart';
 /// Used with Canvas.drawImage()
 typedef DecodedImage = ui.Image;
 typedef ImageWidget = Image;
+
+/// Flutter allows you to store images in several ways: as Uint8Lists, as
+/// ui.Images (typedeffed by me to DecodedImage), as StatelessWidget Images
+/// (typedeffed by me to ImageWidget); this is because they want me to be
+/// confused and unhappy. this weak map associates objects of the aforementioned
+/// types with strings as a way to add a "name" field to all of them at once.
+final imageNames = Expando<String>();
+
+/// attempts to store a name in [imageNames].
+Future<Uint8List?> getImageBytes() async {
+  FilePickerResult? result =
+      await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+  if (result != null && result.files.isNotEmpty) {
+    Uint8List? bytes = result.files.first.bytes;
+    if (bytes != null) {
+      imageNames[bytes] = result.files.first.name;
+      return bytes;
+    }
+  }
+  return null;
+}
+
+/// attempts to store a name in [imageNames].
+Future<DecodedImage?> getImage() async {
+  final bytes = await getImageBytes();
+  if (bytes != null) {
+    try {
+      final ui.Codec codec = await ui.instantiateImageCodec(bytes);
+      final image = (await codec.getNextFrame()).image;
+      imageNames[image] = imageNames[bytes];
+      return image;
+    } catch (e) {
+      log("could not load image", level: 500);
+      log(e.toString());
+    }
+  }
+  return null;
+}
+
+/// attempts to store a name in [imageNames].
+Future<ImageWidget?> getImageWidget() async {
+  final bytes = await getImageBytes();
+  if (bytes != null) {
+    final result =
+        ImageWidget.memory(bytes, filterQuality: FilterQuality.medium,
+            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+      if (wasSynchronouslyLoaded) return child;
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: frame != null
+            ? child
+            : Container(
+                padding: const EdgeInsets.all(40),
+                child: const SizedBox(
+                  height: 60,
+                  width: 60,
+                  child: CircularProgressIndicator(strokeWidth: 6),
+                ),
+              ),
+      );
+    });
+    imageNames[result] = imageNames[bytes];
+    return result;
+  }
+  return null;
+}
 
 extension LowerDimensions on Matrix4 {
   vec.Matrix3 toMatrix3() {
@@ -405,6 +473,9 @@ class FrameCollection extends ChangeNotifier {
   void addImage(FrameModel frame, DecodedImage image) {
     if (frames.contains(frame)) {
       frame.image = image;
+      if (imageNames[image] != null) {
+        frame.nameField.text = imageNames[image]!;
+      }
       notifyListeners();
     }
   }
