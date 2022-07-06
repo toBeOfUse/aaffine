@@ -243,34 +243,39 @@ class FrameState extends State<FrameWidget> {
                       top: labelPos.dy,
                       child: state.undoViewerScale(
                         shrinkTowards: Alignment.topCenter,
-                        Container(
-                          decoration: const BoxDecoration(
-                              color: Colors.white60,
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(5))),
-                          padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
-                          child: SizedBox(
-                            width: labelWidth.toDouble(),
-                            height: labelHeight.toDouble(),
-                            child: TextField(
-                              textAlign: TextAlign.center,
-                              textAlignVertical: TextAlignVertical.center,
-                              style:
-                                  const TextStyle(fontSize: labelHeight - 15),
-                              controller: frame.nameField,
-                              clipBehavior: Clip.none,
-                              decoration: const InputDecoration(
-                                  border: OutlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey),
-                                  ),
-                                  labelStyle: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: labelHeight - 15),
-                                  alignLabelWithHint: true,
-                                  floatingLabelAlignment:
-                                      FloatingLabelAlignment.center,
-                                  fillColor: Colors.black26,
-                                  labelText: "Frame ID"),
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: showControls ? 1 : 0,
+                          child: Container(
+                            decoration: const BoxDecoration(
+                                color: Colors.white60,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5))),
+                            padding: const EdgeInsets.fromLTRB(5, 8, 5, 5),
+                            child: SizedBox(
+                              width: labelWidth.toDouble(),
+                              height: labelHeight.toDouble(),
+                              child: TextField(
+                                textAlign: TextAlign.center,
+                                textAlignVertical: TextAlignVertical.center,
+                                style:
+                                    const TextStyle(fontSize: labelHeight - 15),
+                                controller: frame.nameField,
+                                clipBehavior: Clip.none,
+                                decoration: const InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey),
+                                    ),
+                                    labelStyle: TextStyle(
+                                        color: Colors.black,
+                                        fontSize: labelHeight - 15),
+                                    alignLabelWithHint: true,
+                                    floatingLabelAlignment:
+                                        FloatingLabelAlignment.center,
+                                    fillColor: Colors.black26,
+                                    labelText: "Frame ID"),
+                              ),
                             ),
                           ),
                         ),
