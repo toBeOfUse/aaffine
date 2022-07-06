@@ -53,8 +53,8 @@ Future<DecodedImage?> getImage() async {
 }
 
 /// attempts to store a name in [imageNames].
-Future<ImageWidget?> getImageWidget() async {
-  final bytes = await getImageBytes();
+Future<ImageWidget?> getImageWidget([Uint8List? fromBytes]) async {
+  final bytes = fromBytes ?? await getImageBytes();
   if (bytes != null) {
     final result =
         ImageWidget.memory(bytes, filterQuality: FilterQuality.medium,
