@@ -158,20 +158,26 @@ class FrameModel {
   DecodedImage? image;
   TextEditingController nameField;
 
-  /// Creates a very boring default frame. Points are clockwise with the top
-  /// left first; N.B. all future constructors should follow this convention!!
+  /// Make sure the [points] are clockwise with the top left first so i do not
+  /// have to actually write code to sort them
+  FrameModel(List<Offset> points, [this.image, String? name])
+      : _points = points.map((e) => PointModel(e)).toList(),
+        id = frameCount,
+        nameField =
+            TextEditingController(text: name ?? "PerspectiveFrame$frameCount") {
+    frameCount++;
+  }
+
+  /// Creates a very boring default frame
   FrameModel.square(
       {Offset pos = const Offset(0.1, 0.1), double sideLength = 0.2})
-      : id = frameCount,
-        nameField = TextEditingController(text: "PerspectiveFrame$frameCount"),
-        _points = [
+      : this([
           pos,
           Offset(pos.dx + sideLength, pos.dy),
           Offset(pos.dx + sideLength, pos.dy + sideLength),
           Offset(pos.dx, pos.dy + sideLength),
-        ].map((e) => PointModel(e)).toList() {
-    frameCount++;
-  }
+        ]);
+
   factory FrameModel.overlapAvoidingSquare() {
     return FrameModel.square(
         pos: Offset(0.1 + 0.05 * frameCount, 0.1 + 0.05 * frameCount));
@@ -440,6 +446,15 @@ class FrameCollection extends ChangeNotifier {
 
   FrameCollection() : frames = [] {
     addFrame(FrameModel.square());
+  }
+
+  FrameCollection.prefab(this.frames, ImageWidget backgroundImage) {
+    for (final frame in frames) {
+      for (final point in frame.points) {
+        _pointIndex[point.id] = frame;
+      }
+    }
+    setMainImage(backgroundImage);
   }
 
   Map<String, dynamic> toJSON() {
