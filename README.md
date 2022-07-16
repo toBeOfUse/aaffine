@@ -28,7 +28,7 @@ Full command example:
 
 This program outputs several coordinate lists and matrices for each frame that you can read with other programs, if, for example, you want to keep the frame layout but switch out the images. The top-level structure has the following schema:
 
-```json
+```
 {
     "name": string,
     "frames": Frame[]
@@ -37,7 +37,7 @@ This program outputs several coordinate lists and matrices for each frame that y
 
 The Frame schema looks like this:
 
-```json
+```
 {
     "name": string,
     "4x4Matrix"?: Matrix,
