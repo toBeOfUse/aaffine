@@ -57,7 +57,6 @@ class FramePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final frame in frames) {
-      canvas.save();
       if (drawLines) {
         for (int i = 0; i < 4; i++) {
           for (var layer = 0; layer < 2; layer++) {
@@ -79,7 +78,6 @@ class FramePainter extends CustomPainter {
         canvas.transform(getF64L(tf));
         canvas.drawImage(image, Offset.zero, Paint()..filterQuality = quality);
       }
-      canvas.restore();
     }
   }
 
