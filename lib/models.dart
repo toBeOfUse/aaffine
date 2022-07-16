@@ -183,11 +183,31 @@ class FrameModel {
         pos: Offset(0.1 + 0.05 * frameCount, 0.1 + 0.05 * frameCount));
   }
 
-  Map<String, dynamic>? toJSON() {
-    final matrix = makeImageFit(1, 1);
+  Map<String, dynamic> toJSON() {
+    final matrix = makeImageFit(1, 1, false);
+    final nMatrix = makeImageFit(1, 1, true)!;
+    final reverseMatrix = makeImageFit(1, 1, false, true);
+    final nReverseMatrix = makeImageFit(1, 1, true, true)!;
+    // frames are always in normalized coordinate system below (screen space x,
+    // y are in [0, 1])
     return {
-      if (matrix != null) "4x4matrix": matrix.toLists(),
-      if (matrix != null) "3x3matrix": matrix.toMatrix3().toLists(),
+      // these map pixel coordinates in this.image to the correct
+      // coordinates in normalized screen space
+      if (matrix != null) "4x4Matrix": matrix.toLists(),
+      if (matrix != null) "3x3Matrix": matrix.toMatrix3().toLists(),
+      // these map coordinates in normalized screen space to pixel coordinates
+      // within this.image
+      if (reverseMatrix != null) "4x4ReverseMatrix": reverseMatrix.toLists(),
+      if (reverseMatrix != null)
+        "3x3ReverseMatrix": reverseMatrix.toMatrix3().toLists(),
+      // these map normalized coordinates for points in this.image to the frames
+      // (scale by your image dimensions before using)
+      "4x4MatrixNormalized": nMatrix.toLists(),
+      "3x3MatrixNormalized": nMatrix.toMatrix3().toLists(),
+      // these map normalized coordinates in screen space to normalized
+      // coordinates of points in this.image
+      "4x4ReverseMatrixNormalized": nReverseMatrix.toLists(),
+      "3x3ReverseMatrixNormalized": nReverseMatrix.toMatrix3().toLists(),
       if (objectSpaceCoords != null)
         "imagePlanePoints":
             objectSpaceCoords!.map((e) => [e.dx, e.dy]).toList(),
@@ -220,15 +240,32 @@ class FrameModel {
   /// are actually located on the canvas we're going to draw on.) main ref:
   /// https://web.archive.org/web/20150222120106/xenia.media.mit.edu/~cwren/interpolator/
   ///
-  /// Returns: null if this.image is null; a [Matrix4] otherwise.
-  Matrix4? makeImageFit(double screenSpaceWidth, double screenSpaceHeight) {
-    final width = image?.width.toDouble();
-    final height = image?.height.toDouble();
-    final objectSpaceCoords = this.objectSpaceCoords;
-    if (width != null && height != null && objectSpaceCoords != null) {
+  /// If [normalizedImageCoords] is true, the output matrix will be calculated
+  /// to act on an image that is 1 unit wide and 1 unit tall. Scale by your
+  /// actual image dimensions to use this. Otherwise, the matrix is calculated
+  /// to act on [this.image]'s dimensions.
+  ///
+  /// Returns: null if [this.image] is null and normalizedImageCoords is false;
+  /// a [Matrix4] otherwise.
+  Matrix4? makeImageFit(double screenSpaceWidth, double screenSpaceHeight,
+      [bool normalizedImageCoords = false, bool reverse = false]) {
+    final objectSpaceCoords = normalizedImageCoords
+        ? [
+            const Offset(0, 0),
+            const Offset(1, 0),
+            const Offset(1, 1),
+            const Offset(0, 1)
+          ]
+        : this.objectSpaceCoords;
+    if (objectSpaceCoords != null) {
       final worldSpaceCoords = [
         for (final p in points) Offset(p.loc.dx, p.loc.dy)
       ];
+      if (reverse) {
+        final temp = [...worldSpaceCoords];
+        worldSpaceCoords.setAll(0, objectSpaceCoords);
+        objectSpaceCoords.setAll(0, temp);
+      }
       final imageSpaceDef = <List<double>>[];
       for (var i = 0; i < 4; i++) {
         final objectPoint = objectSpaceCoords[i];
@@ -297,9 +334,13 @@ class FrameModel {
           }
         }
       }
-      final scale = Matrix4.diagonal3(
-          vec.Vector3(screenSpaceWidth, screenSpaceHeight, 1));
-      return scale * mat4;
+      if (screenSpaceHeight != 1 || screenSpaceWidth != 1) {
+        final scale = Matrix4.diagonal3(
+            vec.Vector3(screenSpaceWidth, screenSpaceHeight, 1));
+        return scale * mat4;
+      } else {
+        return mat4;
+      }
     } else {
       return null;
     }
