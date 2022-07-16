@@ -1,7 +1,5 @@
-import 'save_files/web_save.dart'
-    if (dart.library.io) "save_files/desktop_save.dart";
-
 import 'dart:io';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -9,9 +7,12 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'models.dart';
 import 'widgets.dart';
+import 'save_files/web_save.dart'
+    if (dart.library.io) "save_files/desktop_save.dart";
 
 class MyApp extends StatelessWidget {
   final FrameCollection? initialScene;
@@ -85,6 +86,35 @@ class ControlRow extends StatelessWidget {
                 tooltip: "Close the current project",
                 icon: const Icon(Icons.close_outlined),
                 onPressed: () => state.clearMainImage(),
+              ),
+              IconButton(
+                splashRadius: 25,
+                tooltip: "Load frames from a JSON file",
+                icon: const Icon(Icons.folder_outlined),
+                onPressed: () async {
+                  FilePickerResult? result = await FilePicker.platform
+                      .pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ["json"],
+                          withData: true);
+                  if (result != null && result.files.isNotEmpty) {
+                    final text =
+                        utf8.decode(result.files.first.bytes!.toList());
+                    final data = jsonDecode(text);
+                    final frames = [
+                      for (final frameData in data["frames"])
+                        FrameModel(
+                            (frameData["worldPlanePoints"] as List)
+                                .map((e) => Offset(e[0], e[1]))
+                                .toList(),
+                            null,
+                            frameData['name'])
+                    ];
+                    for (final frame in frames) {
+                      state.addFrame(frame);
+                    }
+                  }
+                },
               ),
               IconButton(
                 splashRadius: 25,
