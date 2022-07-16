@@ -75,8 +75,10 @@ class FramePainter extends CustomPainter {
       final tf = frame.makeImageFit(size.width, size.height);
       final image = frame.image;
       if (tf != null && image != null) {
+        canvas.save();
         canvas.transform(getF64L(tf));
         canvas.drawImage(image, Offset.zero, Paint()..filterQuality = quality);
+        canvas.restore();
       }
     }
   }
