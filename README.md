@@ -8,7 +8,7 @@ For that purpose, I created this simple app in Flutter that lets you graphically
 
 ![A picture of Times Square on the left; the same picture with the billboards covered by a variety of other images on the right.](demo.jpg)
 
-This app can export PNG images with the polished results of your projects as well as JSON files that describe it in detail.
+This app can export PNG images with the polished results of your projects, as well as JSON files that you can use in other programs or reopen later.
 
 ## Getting this thing to run
 
@@ -24,7 +24,7 @@ Full command example:
 
 `flutter build web --web-renderer canvaskit --dart-define=BROWSER_IMAGE_DECODING_ENABLED=false -t lib/main_demo.dart --release`
 
-## Appendix A: Reading the JSON output
+## Appendix A: Reading the JSON output in other programs
 
 This program outputs several coordinate lists and matrices for each frame that you can read with other programs, if, for example, you want to keep the frame layout but switch out the images. The top-level structure has the following schema:
 
