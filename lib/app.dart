@@ -14,23 +14,6 @@ import 'widgets.dart';
 import 'save_files/web_save.dart'
     if (dart.library.io) "save_files/desktop_save.dart";
 
-class MyApp extends StatelessWidget {
-  final FrameCollection? initialScene;
-  const MyApp({Key? key, this.initialScene}) : super(key: key);
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Perspective',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: FramesPage(title: 'Perspective', initialScene: initialScene),
-    );
-  }
-}
-
 void saveResult(List<FrameModel> frames, ImageProvider provider) {
   provider.resolve(const ImageConfiguration()).addListener(
       ImageStreamListener((ImageInfo imageInfo, bool synchronousCall) async {
@@ -53,6 +36,118 @@ void saveResult(List<FrameModel> frames, ImageProvider provider) {
   }));
 }
 
+/// App entry point
+class FramesPage extends StatelessWidget {
+  final FrameCollection? initialScene;
+  const FramesPage({super.key, this.initialScene});
+
+  @override
+  Widget build(BuildContext context) {
+    final body = Consumer<FrameCollection>(
+      builder: (context, frames, child) => Focus(
+        onKeyEvent: (FocusNode f, KeyEvent k) {
+          if (k.logicalKey == LogicalKeyboardKey.escape) {
+            frames.clearMainImage();
+            return KeyEventResult.handled;
+          } else {
+            return KeyEventResult.ignored;
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text("Mitch's Perspective Transformer"),
+          ),
+          body: Column(
+            children: [
+              if (frames.backgroundImage != null)
+                Container(
+                  margin: const EdgeInsets.all(8.0),
+                  child: const Text(
+                      "Zoom around the image and tap and drag frames and their "
+                      "points to gain a Sense of Perspective"),
+                ),
+              const Flexible(
+                child: FramesScene(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    Widget shell(Widget body) => MaterialApp(
+        title: 'Perspective',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: body);
+
+    if (initialScene != null) {
+      return ChangeNotifierProvider.value(
+          value: initialScene, child: shell(body));
+    } else {
+      return ChangeNotifierProvider(
+          create: (context) => FrameCollection(), child: shell(body));
+    }
+  }
+}
+
+/// App primary content
+class FramesScene extends StatelessWidget {
+  const FramesScene({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final frames = Provider.of<FrameCollection>(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: DottedBorder(
+          padding: const EdgeInsets.all(8.0),
+          dashPattern: const [5],
+          child: frames.backgroundImage == null
+              ? TextButton(
+                  onPressed: () async {
+                    final image = await getImageWidget();
+                    if (image != null) {
+                      frames.setMainImage(image);
+                    }
+                  },
+                  child: const Text("Open Image"),
+                )
+              : IntrinsicWidth(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: InteractiveViewer(
+                          transformationController: frames.viewerController,
+                          onInteractionUpdate: (ScaleUpdateDetails d) =>
+                              frames.updateScale(),
+                          maxScale: 5,
+                          child: Stack(
+                            children: [
+                              frames.backgroundImage as Widget,
+                              if (frames.mainImageLoaded)
+                                const Positioned.fill(
+                                  child: FrameLayer(),
+                                )
+                            ],
+                          ),
+                        ),
+                      ),
+                      const ControlRow(),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Control bar for primary content
 class ControlRow extends StatelessWidget {
   const ControlRow({super.key});
   @override
@@ -151,86 +246,5 @@ class ControlRow extends StatelessWidget {
             ]),
           )
         ]);
-  }
-}
-
-/// Page that displays flexible frames that can hold images.
-class FramesPage extends StatelessWidget {
-  final FrameCollection? initialScene;
-  const FramesPage({super.key, required this.title, this.initialScene});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final body = Consumer<FrameCollection>(
-      builder: (context, frames, child) => Focus(
-        onKeyEvent: (FocusNode f, KeyEvent k) {
-          if (k.logicalKey == LogicalKeyboardKey.escape) {
-            frames.clearMainImage();
-            return KeyEventResult.handled;
-          } else {
-            return KeyEventResult.ignored;
-          }
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(title),
-          ),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: DottedBorder(
-                padding: const EdgeInsets.all(8.0),
-                dashPattern: const [5],
-                child: frames.backgroundImage == null
-                    ? TextButton(
-                        onPressed: () async {
-                          final image = await getImageWidget();
-                          if (image != null) {
-                            frames.setMainImage(image);
-                          }
-                        },
-                        child: const Text("Open Image"),
-                      )
-                    : IntrinsicWidth(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: InteractiveViewer(
-                                transformationController:
-                                    frames.viewerController,
-                                onInteractionUpdate: (ScaleUpdateDetails d) =>
-                                    frames.updateScale(),
-                                maxScale: 5,
-                                child: Stack(
-                                  children: [
-                                    frames.backgroundImage as Widget,
-                                    if (frames.mainImageLoaded)
-                                      const Positioned.fill(
-                                        child: FrameLayer(),
-                                      )
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const ControlRow(),
-                          ],
-                        ),
-                      ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    if (initialScene != null) {
-      return ChangeNotifierProvider.value(value: initialScene, child: body);
-    } else {
-      return ChangeNotifierProvider(
-          create: (context) => FrameCollection(), child: body);
-    }
   }
 }

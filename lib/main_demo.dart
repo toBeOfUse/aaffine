@@ -31,6 +31,6 @@ void main() {
                 .load("assets/andre-benz-_T35CPjjSik-unsplash.jpg"))
             .buffer
             .asUint8List()))!);
-    runApp(MyApp(initialScene: demo));
+    runApp(FramesPage(initialScene: demo));
   });
 }
