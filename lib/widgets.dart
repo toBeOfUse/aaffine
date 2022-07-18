@@ -192,8 +192,9 @@ class FrameState extends State<FrameWidget> {
                               1 / constraints.maxHeight));
                     });
                   },
-                  child: GestureDetector(
-                    onTapUp: (event) {
+                  child: Listener(
+                    behavior: HitTestBehavior.translucent,
+                    onPointerUp: (event) {
                       setState(() {
                         quadHovered = frame.pointInFrame((event.localPosition -
                                 Offset(PointWidget.radius, PointWidget.radius))
