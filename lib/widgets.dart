@@ -183,17 +183,25 @@ class FrameState extends State<FrameWidget> {
           child: Stack(
             children: [
               MouseRegion(
-                opaque: false,
-                onHover: (event) {
-                  setState(() {
-                    quadHovered = frame.pointInFrame((event.localPosition -
-                            const Offset(
-                                PointWidget.radius, PointWidget.radius))
-                        .scale(1 / constraints.maxWidth,
-                            1 / constraints.maxHeight));
-                  });
-                },
-              ),
+                  opaque: false,
+                  onHover: (event) {
+                    setState(() {
+                      quadHovered = frame.pointInFrame((event.localPosition -
+                              Offset(PointWidget.radius, PointWidget.radius))
+                          .scale(1 / constraints.maxWidth,
+                              1 / constraints.maxHeight));
+                    });
+                  },
+                  child: GestureDetector(
+                    onTapUp: (event) {
+                      setState(() {
+                        quadHovered = frame.pointInFrame((event.localPosition -
+                                Offset(PointWidget.radius, PointWidget.radius))
+                            .scale(1 / constraints.maxWidth,
+                                1 / constraints.maxHeight));
+                      });
+                    },
+                  )),
               MouseRegion(
                 opaque: false,
                 onEnter: (event) => setState(() {
@@ -206,7 +214,8 @@ class FrameState extends State<FrameWidget> {
                 child: Stack(children: [
                   if (!controlRowCenterPos.dx.isNaN &&
                       !controlRowCenterPos.dy.isNaN &&
-                      state.showingLines)
+                      state.showingLines &&
+                      showControls)
                     Positioned(
                       left: controlRowCenterPos.dx,
                       top: controlRowCenterPos.dy,
