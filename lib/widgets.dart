@@ -10,7 +10,8 @@ import 'models.dart';
 /// them.
 class PointWidget extends StatelessWidget {
   final int pointID;
-  static const double radius = 5;
+  static double get radius =>
+      WidgetsBinding.instance.window.physicalSize.width > 600 ? 5 : 10;
   const PointWidget({super.key, required this.pointID});
   @override
   Widget build(BuildContext context) {
