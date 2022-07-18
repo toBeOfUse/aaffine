@@ -10,8 +10,17 @@ import 'models.dart';
 /// them.
 class PointWidget extends StatelessWidget {
   final int pointID;
-  static double get radius =>
-      WidgetsBinding.instance.window.physicalSize.width > 600 ? 5 : 10;
+
+  /// this radius is smaller on non-wide devices because i found it hard to drag
+  /// the points around on my phone otherwise
+  static double get radius {
+    final window = WidgetsBinding.instance.window;
+    final logicalWidth = window.physicalSize.width / window.devicePixelRatio;
+    return logicalWidth > 600 ? 5 : 10;
+  }
+
+  static const visualRadius = 5;
+
   const PointWidget({super.key, required this.pointID});
   @override
   Widget build(BuildContext context) {
@@ -29,12 +38,15 @@ class PointWidget extends StatelessWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
+          padding: EdgeInsets.all((radius - visualRadius)),
           width: radius * 2,
           height: radius * 2,
-          decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.black),
-              shape: BoxShape.circle),
+          child: Container(
+            decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.black),
+                shape: BoxShape.circle),
+          ),
         ),
       ),
     );
