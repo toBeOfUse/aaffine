@@ -31,7 +31,7 @@ void saveResult(List<FrameModel> frames, ImageProvider provider) {
         (Platform.isLinux || Platform.isMacOS || Platform.isWindows)) {
       saveImage(result);
     } else {
-      throw UnimplementedError("Not portable to mobile phones yet. Sorry 🥺");
+      throw UnimplementedError("Not portable to mobile apps yet. Sorry 🥺");
     }
   }));
 }
@@ -64,7 +64,7 @@ class FramesPage extends StatelessWidget {
                   margin: const EdgeInsets.all(8.0),
                   child: const Text(
                       "Zoom around the image and tap and drag frames and their "
-                      "points to gain a Sense of Perspective"),
+                      "points to gain a Sense of Perspective."),
                 ),
               const Flexible(
                 child: FramesScene(),
