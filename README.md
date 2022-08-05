@@ -74,11 +74,11 @@ The matrices output with each frame will help you take an input image and then t
 
 **The matrix fields `4x4Matrix` and `3x3Matrix`** define transformation matrices that will take any point in pixel coordinates on the image attached to the frame and translate it into normalized screen space coordinates. "Normalized screen space coordinates" means coordinates for the output such that the left edge of the output image is at x=0, the right edge is at x=1, the top edge is at y=0, and the bottom edge is at y=1. To take these matrices and make them deliver non-normalized pixel-based coordinates where the right and bottom edges correspond to your desired output width and height, respectively, left-multiply them by a scale matrix with the width as the x scale factor and the height as the y scale factor. It should look like this:
 
-$\begin{bmatrix}\verb|your_output_width| & 0 & 0 \\ 0 & \verb|your_output_height| & 0 \\ 0 & 0 & 1\end{bmatrix} \times $ `3x3Matrix`
+$\begin{bmatrix} your\textunderscore output\textunderscore width & 0 & 0 \\\ 0 & your\textunderscore output\textunderscore height & 0 \\\ 0 & 0 & 1 \end{bmatrix} \times$ `3x3Matrix`
 
 or
 
-$\begin{bmatrix}\verb|your_output_width| & 0 & 0 & 0 \\ 0 & \verb|your_output_height| & 0 & 0 \\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 1\end{bmatrix} \times $ `4x4Matrix`
+$\begin{bmatrix} your\textunderscore output\textunderscore width & 0 & 0 & 0 \\\ 0 & your\textunderscore output\textunderscore height & 0 & 0 \\\ 0 & 0 & 1 & 0 \\\ 0 & 0 & 0 & 1 \end{bmatrix} \times$ `4x4Matrix`
 
 **The matrix fields `4x4ReverseMatrix` and `3x3ReverseMatrix`** reverse the above transformation; they will take any normalized screen space coordinates and deliver the corresponding pixel coordinates on the image that is attached to the frame when the file is saved. This is useful because, in order to make my life more difficult, the Python Imaging Library (PIL or Pillow)'s perspective transform function works in this direction and then doesn't document it anywhere. Presumably some other imaging toolkits out there also do this. FYI, if you are using a similar library that also takes "perspective transform coefficients" in its transform function instead of a matrix, give it the first 8 elements of the matrix in row-major order. The 9th element at the bottom right will always be 1, so it is redundant. But first: in order to use this matrix with a given non-normalized output size, do the multiplication from the last section but switch the order, naturally.
 
@@ -88,6 +88,6 @@ $\begin{bmatrix}\verb|your_output_width| & 0 & 0 & 0 \\ 0 & \verb|your_output_he
 
 ## Credits
 
-The transformations used in this app were inspired by the perspective transform option in PIL, the Python Imaging Library. The underlying math is derived from [this archived page by Christopher R. Wren.](https://web.archive.org/web/20150222120106/xenia.media.mit.edu/~cwren/interpolator/).
+The transformations used in this app were inspired by the perspective transform option in PIL, the Python Imaging Library. The underlying math is derived from [this archived page by Christopher R. Wren](https://web.archive.org/web/20150222120106/xenia.media.mit.edu/~cwren/interpolator/).
 
 The background image for the demo mode was taken by [Andre Benz](https://www.instagram.com/benz/?hl=en) and posted on [Unsplash](https://unsplash.com/photos/_T35CPjjSik).
