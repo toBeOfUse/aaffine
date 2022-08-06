@@ -24,7 +24,7 @@ Full command example:
 
 `flutter build web --web-renderer canvaskit --dart-define=BROWSER_IMAGE_DECODING_ENABLED=false -t lib/main_demo.dart --release`
 
-## Appendix A: Reading the JSON output in other programs
+## Appendix: Reading the JSON output in other programs
 
 This program outputs several coordinate lists and matrices for each frame that you can read with other programs, if, for example, you want to keep the frame layout but switch out the images. The top-level structure has the following schema:
 
