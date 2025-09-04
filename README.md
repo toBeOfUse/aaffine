@@ -12,17 +12,17 @@ This app can export PNG images with the polished results of your projects, as we
 
 ## Getting this thing to run
 
-First, you need to install [Flutter](https://docs.flutter.dev/get-started/install). Then, you can download the code dependencies with `flutter pub get`. Finally, you can build for a desktop platform with e.g. `flutter build windows`. There is also a "demo version" that will open a pre-made project on launch that you can choose with the option `-t lib/main_demo.dart`.
+If you have Docker installed, for a quick build of the web-based demo, you can just run `docker build -o ./dist .`.
 
-### Web-Mode Caveats
+Otherwise, you need to install [Flutter](https://docs.flutter.dev/get-started/install). Then, you can download the code dependencies with `flutter pub get`. Finally, you can build for a desktop platform with e.g. `flutter build windows`. There is also a "demo version" that will open a pre-made project on launch that you can choose with the option `-t lib/main_demo.dart`.
 
-For best visual quality, use the CanvasKit web renderer. Use this --dart-define flag to build for web due to a CanvasKit bug. Debug mode is not supported thereby 😔; only --profile and --release.
+### Web Mode
 
-`--dart-define=BROWSER_IMAGE_DECODING_ENABLED=false`
+This has not yet been updated to use package:web instead of dart:html, so it can't be built to pure WebAssembly. It uses the JS compilation target and CanvasKit instead.
 
-Full command example:
-
-`flutter build web --web-renderer canvaskit --dart-define=BROWSER_IMAGE_DECODING_ENABLED=false -t lib/main_demo.dart --release`
+```bash
+flutter build web -t lib/main_demo.dart --release
+```
 
 ## Appendix: Reading the JSON output in other programs
 
