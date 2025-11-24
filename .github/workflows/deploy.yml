@@ -1,0 +1,21 @@
+name: Deploy Site
+
+on:
+  push:
+    branches: ["master"]
+
+permissions:
+  # IMPORTANT: this enables automatic authentication to the server
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: internet-golf/deploy@v0.1.9
+      - run: |
+          docker build . -o .
+          golf create-deployment aaffine.stuffedanimal.family --auth github-oidc
+          golf deploy-content aaffine.stuffedanimal.family --auth github-oidc --files ./dist
